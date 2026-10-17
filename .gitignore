@@ -1,0 +1,11 @@
+# segreti
+.env
+
+# dipendenze e build
+backend/vendor/
+backend/.phpunit.cache/
+app/build/
+app/.dart_tool/
+
+# file di lavoro di Claude (mockup, ledger)
+.superpowers/
