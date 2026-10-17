@@ -1,0 +1,17 @@
+# PostgreSQL per lo sviluppo: `docker compose up -d` lo avvia, `docker compose down` lo ferma.
+services:
+  db:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: gym
+      POSTGRES_PASSWORD: gym
+      POSTGRES_DB: gymtracker
+    ports:
+      - "5432:5432"
+    volumes:
+      - dbdata:/var/lib/postgresql/data
+      # eseguito solo al primo avvio: crea il database usato dai test
+      - ./docker/init-test-db.sql:/docker-entrypoint-initdb.d/init-test-db.sql
+
+volumes:
+  dbdata:
