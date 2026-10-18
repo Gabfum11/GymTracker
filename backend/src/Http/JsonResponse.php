@@ -24,7 +24,7 @@ final class JsonResponse
         //JSON_UNESCAPED_UNICODE lascia le lettere accentate cosi come sono 
         //JSON_THROW_ON_ERROR fa lanciare un'eccezione se la codifica fallisce, invece di restituire false
         //getbody()->write scrive il testo JSON nel corpo della risposta, che Slim poi invia al client.
-        $response->getBody()->write(json_encode($data, JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR));
+        $response->getBody()->write(json_encode($data, JSON_UNESCAPED_UNICODE | JSON_PRESERVE_ZERO_FRACTION | JSON_THROW_ON_ERROR));
 
         return $response
             ->withHeader('Content-Type', 'application/json')

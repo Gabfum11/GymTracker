@@ -5,7 +5,8 @@ declare(strict_types=1); #attiva i tipi rigidi. Senza, se una funzione vuole un 
 // Punto d'ingresso del backend: ogni richiesta HTTP che arriva al server passa da qui.
 
 
-use App\AppFactory; #app perchè 
+use App\AppFactory; #app perchè
+use App\Database;
 use Dotenv\Dotenv;
 
 require __DIR__ . '/../vendor/autoload.php'; #il punto unisce le strighe, carica il file autoload.php generato da composer, che a sua volta carica tutte le classi del progetto e delle librerie esterne.
@@ -15,7 +16,8 @@ Dotenv::createImmutable(__DIR__ . '/..')->safeLoad(); #legge le variabili d'ambi
 #createImmutable : se una variabile esiste gia in $_ENV non la sovrascrive. safeLoad: se il file .env non esiste non da errore.
 $app = AppFactory::create([ # :: chiama un metodo statico, cioè di una classe e non di un oggetto.
     'debug' => ($_ENV['APP_DEBUG'] ?? 'false') === 'true', #se la variabile d'ambiente APP_DEBUG è true, allora il debug è attivo. Se non esiste, il default è false
-]);
+    'dev_user_id' => (int) ($_ENV['DEV_USER_ID'] ?? 1), // utente fisso finché non c'è il login (passo 9)
+], Database::connect($_ENV));
 
 $app->run();
 #legge la richiesta arrivata, la fa passare per i middleware e il controller giusto
