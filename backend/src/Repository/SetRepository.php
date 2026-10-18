@@ -41,6 +41,25 @@ final class SetRepository
         }
     }
 
+    /**
+     * Tutte le serie dell'utente, dalla più vecchia: l'input di RecordService.
+     * shortcut: legge tutto lo storico a ogni riepilogo, va bene per centinaia di allenamenti; oltre, salvare i record in una tabella.
+     */
+    public function historyForUser(int $userId): array
+    {
+        $stmt = $this->pdo->prepare(
+            'SELECT s.workout_id, w.started_at, s.exercise_id, e.name AS exercise, s.position, s.weight_kg, s.reps
+             FROM sets s
+             JOIN workouts w ON w.id = s.workout_id
+             JOIN exercises e ON e.id = s.exercise_id
+             WHERE w.user_id = ?
+             ORDER BY w.started_at, s.workout_id, s.exercise_id, s.position'
+        );
+        $stmt->execute([$userId]);
+
+        return $stmt->fetchAll();
+    }
+
     /** Le serie di un allenamento con il nome dell'esercizio, nell'ordine in cui sono stati fatti gli esercizi. */
     public function forWorkout(int $workoutId): array
     {

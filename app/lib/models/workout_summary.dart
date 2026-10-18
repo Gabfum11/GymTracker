@@ -17,6 +17,25 @@ class WorkoutExercise {
   final List<SetEntry> sets;
 }
 
+/// Un record battuto: la serie migliore di sempre per quell'esercizio (contratto API "RecordOut").
+class RecordOut {
+  const RecordOut({required this.exercise, required this.date, required this.metric, required this.weightKg, required this.reps});
+
+  factory RecordOut.fromJson(Map<String, dynamic> json) => RecordOut(
+        exercise: json['exercise'] as String,
+        date: DateTime.parse(json['date'] as String),
+        metric: json['metric'] as String,
+        weightKg: (json['weight_kg'] as num).toDouble(),
+        reps: json['reps'] as int,
+      );
+
+  final String exercise;
+  final DateTime date;
+  final String metric; // "kg" oppure "reps" (esercizi a corpo libero senza peso)
+  final double weightKg;
+  final int reps;
+}
+
 /// Il riepilogo di un allenamento, come lo restituisce il backend (contratto API "WorkoutSummary").
 class WorkoutSummary {
   const WorkoutSummary({
@@ -27,6 +46,7 @@ class WorkoutSummary {
     required this.durationMinutes,
     required this.setCount,
     required this.exerciseCount,
+    required this.records,
     required this.exercises,
   });
 
@@ -38,6 +58,7 @@ class WorkoutSummary {
         durationMinutes: json['duration_minutes'] as int,
         setCount: json['set_count'] as int,
         exerciseCount: json['exercise_count'] as int,
+        records: [for (final r in json['records'] as List) RecordOut.fromJson(r as Map<String, dynamic>)],
         exercises: [for (final e in json['exercises'] as List) WorkoutExercise.fromJson(e as Map<String, dynamic>)],
       );
 
@@ -48,5 +69,6 @@ class WorkoutSummary {
   final int durationMinutes;
   final int setCount;
   final int exerciseCount;
+  final List<RecordOut> records;
   final List<WorkoutExercise> exercises;
 }

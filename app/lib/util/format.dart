@@ -15,5 +15,11 @@ String formatSet(num kg, int reps, {bool weighted = false}) {
   return '${weighted ? '+' : ''}${formatKg(kg)} kg × $reps';
 }
 
+const _days = ['lun', 'mar', 'mer', 'gio', 'ven', 'sab', 'dom'];
+const _months = ['gen', 'feb', 'mar', 'apr', 'mag', 'giu', 'lug', 'ago', 'set', 'ott', 'nov', 'dic'];
+
+/// DateTime(2026, 10, 17) → "sab 17 ott"
+String formatDay(DateTime date) => '${_days[date.weekday - 1]} ${date.day} ${_months[date.month - 1]}';
+
 /// "42,5" o "42.5" → 42.5; tutto ciò che non è un numero → null.
 double? parseItalianNumber(String text) => double.tryParse(text.trim().replaceAll(',', '.'));

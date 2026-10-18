@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../theme.dart';
+import '../summary/summary_screen.dart';
 import 'chat_view_model.dart';
 import 'confirm_card.dart';
 
@@ -29,6 +30,15 @@ class _ChatScreenState extends State<ChatScreen> {
     final text = _input.text;
     _input.clear();
     vm.send(text);
+  }
+
+  Future<void> _openSummary() async {
+    final summary = await vm.currentSummary();
+    if (summary == null || !mounted) return;
+    await Navigator.push(
+      context,
+      MaterialPageRoute<void>(builder: (_) => SummaryScreen(summary: summary, onSave: vm.finish)),
+    );
   }
 
   @override
@@ -83,8 +93,7 @@ class _ChatScreenState extends State<ChatScreen> {
             children: [
               Expanded(child: OutlinedButton(onPressed: vm.nextExercise, child: const Text('Prossimo esercizio'))),
               const SizedBox(width: 8),
-              // collegato al riepilogo nel passo 8
-              const Expanded(child: OutlinedButton(onPressed: null, child: Text('Fine allenamento'))),
+              Expanded(child: OutlinedButton(onPressed: vm.busy ? null : _openSummary, child: const Text('Fine allenamento'))),
             ],
           ),
           const SizedBox(height: 10),

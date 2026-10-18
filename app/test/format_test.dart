@@ -25,6 +25,13 @@ void main() {
     });
   });
 
+  group('formatDay', () {
+    test('giorno della settimana, numero e mese in italiano', () {
+      expect(formatDay(DateTime(2026, 10, 17)), 'sab 17 ott');
+      expect(formatDay(DateTime(2026, 9, 1)), 'mar 1 set');
+    });
+  });
+
   group('parseItalianNumber', () {
     test('accetta virgola e punto', () {
       expect(parseItalianNumber('42,5'), 42.5);

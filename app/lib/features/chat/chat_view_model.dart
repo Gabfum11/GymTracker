@@ -204,6 +204,22 @@ class ChatViewModel extends ChangeNotifier {
     });
   }
 
+  /// Il riepilogo dell'allenamento in corso (con i record), per la schermata di fine allenamento.
+  Future<WorkoutSummary?> currentSummary() async {
+    WorkoutSummary? summary;
+    await _run(() async {
+      final json = await _api.get('/workouts/current');
+      summary = json == null ? null : WorkoutSummary.fromJson(json as Map<String, dynamic>);
+    });
+    return summary;
+  }
+
+  /// "Salva allenamento": lo chiude e la chat riparte da capo.
+  Future<void> finish() async {
+    await _run(() => _api.post('/workouts/$workoutId/finish'));
+    if (error == null) await load();
+  }
+
   /// Esegue una chiamata al backend gestendo "sto caricando" e gli errori in un posto solo.
   Future<void> _run(Future<void> Function() action) async {
     busy = true;

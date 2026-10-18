@@ -206,6 +206,33 @@ void main() {
     expect(lastCard().sets.length, 2);
   });
 
+  test('il riepilogo legge i record dal backend', () async {
+    await startWorkout();
+    backend.on('GET /workouts/current', {
+      ...summaryJson(exercises: [exerciseJson(12, 'Dip zavorrati', [[45, 8]], weighted: true)]),
+      'records': [
+        {'exercise': 'Dip zavorrati', 'date': '2026-10-18', 'metric': 'kg', 'weight_kg': 45.0, 'reps': 8},
+      ],
+    });
+
+    final summary = await vm.currentSummary();
+
+    expect(summary!.records.single.exercise, 'Dip zavorrati');
+    expect(summary.records.single.weightKg, 45.0);
+  });
+
+  test('salvare l\'allenamento lo chiude e la chat riparte da "Inizia allenamento"', () async {
+    await startWorkout();
+    backend.on('POST /workouts/1/finish', summaryJson());
+
+    await vm.finish();
+
+    // prima chiude, poi ricarica (e il backend non ha più un allenamento aperto)
+    expect(backend.routes.skip(backend.routes.length - 2), ['POST /workouts/1/finish', 'GET /workouts/current']);
+    expect(vm.hasOpenWorkout, isFalse);
+    expect(vm.items.single, isA<BotMessage>());
+  });
+
   test('un errore del parser non perde il messaggio dell\'utente', () async {
     await startWorkout();
     backend.fail('POST /parse', 503, 'Il bot non risponde, riprova tra poco');

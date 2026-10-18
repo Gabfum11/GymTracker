@@ -66,6 +66,10 @@ final class WorkoutService
 
     private function summary(array $workout): array
     {
-        return SummaryService::build($workout, $this->sets->forWorkout((int) $workout['id']));
+        return SummaryService::build(
+            $workout,
+            $this->sets->forWorkout((int) $workout['id']),
+            RecordService::compute($this->sets->historyForUser((int) $workout['user_id'])),
+        );
     }
 }

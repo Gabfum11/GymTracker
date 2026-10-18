@@ -165,6 +165,27 @@ final class WorkoutApiTest extends DbTestCase
         $this->assertSame(['Dip', 'Panca', 'Curl'], array_column($summary['exercises'], 'name'));
     }
 
+    public function test_summary_marks_the_record_set(): void
+    {
+        $dip = $this->createExercise('Dip');
+        [, $first] = $this->call('POST', '/workouts');
+        $this->call('PUT', "/workouts/{$first['id']}/exercises/$dip/sets", ['sets' => [['weight_kg' => 40, 'reps' => 8]]]);
+        $this->call('POST', "/workouts/{$first['id']}/finish");
+
+        [, $second] = $this->call('POST', '/workouts');
+        [, $summary] = $this->call('PUT', "/workouts/{$second['id']}/exercises/$dip/sets", ['sets' => [
+            ['weight_kg' => 42.5, 'reps' => 8],
+            ['weight_kg' => 45, 'reps' => 6],
+        ]]);
+
+        $this->assertSame([false, true], array_column($summary['exercises'][0]['sets'], 'is_record'));
+        $this->assertCount(1, $summary['records']);
+        $this->assertSame(['exercise' => 'Dip', 'metric' => 'kg', 'weight_kg' => 45.0, 'reps' => 6], array_intersect_key(
+            $summary['records'][0],
+            array_flip(['exercise', 'metric', 'weight_kg', 'reps']),
+        ));
+    }
+
     public function test_post_exercise_reuses_existing_ignoring_case(): void
     {
         [$created, $first] = $this->call('POST', '/exercises', ['name' => 'Dip', 'is_weighted_bodyweight' => true]);

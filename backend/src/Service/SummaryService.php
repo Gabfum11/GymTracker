@@ -15,10 +15,14 @@ final class SummaryService
     /**
      * @param array $workout riga della tabella workouts
      * @param array $sets    righe di SetRepository::forWorkout(), già in ordine
-     * @param array $records record di questo allenamento (arrivano al passo 8)
+     * @param array $records record dell'utente (RecordService::compute): si tengono quelli di questo allenamento
      */
     public static function build(array $workout, array $sets, array $records = []): array
     {
+        $records = array_values(array_filter($records, fn ($r) => $r['workout_id'] === (int) $workout['id']));
+        // per segnare la serie record: [id esercizio => posizione della serie]
+        $recordSet = array_column($records, 'set_index', 'exercise_id');
+
         // raggruppa le serie per esercizio, mantenendo l'ordine
         $exercises = [];
         foreach ($sets as $set) {
@@ -32,7 +36,7 @@ final class SummaryService
             $exercises[$id]['sets'][] = [
                 'weight_kg' => (float) $set['weight_kg'], // PostgreSQL restituisce NUMERIC come testo ("45.00")
                 'reps' => (int) $set['reps'],
-                'is_record' => false,
+                'is_record' => ($recordSet[$id] ?? null) === count($exercises[$id]['sets']),
             ];
         }
         $exercises = array_values($exercises);
@@ -49,7 +53,8 @@ final class SummaryService
             'duration_minutes' => intdiv(($ended ?? new DateTimeImmutable())->getTimestamp() - $started->getTimestamp(), 60),
             'set_count' => count($sets),
             'exercise_count' => count($exercises),
-            'records' => $records,
+            // all'app servono solo questi campi (gli altri erano per trovare la serie)
+            'records' => array_map(fn ($r) => array_intersect_key($r, array_flip(['exercise', 'date', 'metric', 'weight_kg', 'reps'])), $records),
             'exercises' => $exercises,
         ];
     }
