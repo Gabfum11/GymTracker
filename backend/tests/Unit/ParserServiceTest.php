@@ -76,6 +76,15 @@ final class ParserServiceTest extends TestCase
         $this->assertStringContainsString('"typed_name": solo il nome dell\'esercizio', $fake->lastSystem);
     }
 
+    public function test_prompt_explains_weighted_is_only_for_bodyweight(): void
+    {
+        $fake = new FakeLlmClient('{"type":"question","text":"?"}');
+
+        (new ParserService($fake))->parse('panca 70 per 8', [], null, null);
+
+        $this->assertStringContainsString('"weighted": true SOLO per esercizi a corpo libero', $fake->lastSystem);
+    }
+
     public function test_question_is_passed_through(): void
     {
         $result = $this->parseWith('{"type":"question","text":"8 sono le ripetizioni o i kg?"}');

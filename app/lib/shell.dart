@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
 import 'api/api_client.dart';
+import 'features/chat/chat_screen.dart';
+import 'features/chat/chat_view_model.dart';
 
 /// La "cornice" dell'app: la barra in basso con le 4 voci e la schermata scelta.
 class Shell extends StatefulWidget {
@@ -15,6 +17,15 @@ class Shell extends StatefulWidget {
 class _ShellState extends State<Shell> {
   int _tab = 0;
 
+  // creato una volta sola: la chat sopravvive ai cambi di tab
+  late final _chat = ChatViewModel(widget.api)..load();
+
+  @override
+  void dispose() {
+    _chat.dispose();
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -22,7 +33,7 @@ class _ShellState extends State<Shell> {
       body: IndexedStack(
         index: _tab,
         children: [
-          _HealthPlaceholder(api: widget.api),
+          ChatScreen(viewModel: _chat),
           const _Placeholder('Storico'),
           const _Placeholder('Progressi'),
           const _Placeholder('Profilo'),
@@ -42,7 +53,7 @@ class _ShellState extends State<Shell> {
   }
 }
 
-// Segnaposto: le schermate vere arrivano nei passi 7, 12, 13 e 14.
+// Segnaposto: le schermate vere arrivano nei passi 12, 13 e 14.
 class _Placeholder extends StatelessWidget {
   const _Placeholder(this.title);
 
@@ -52,26 +63,5 @@ class _Placeholder extends StatelessWidget {
   Widget build(BuildContext context) => Scaffold(
         appBar: AppBar(title: Text(title)),
         body: const Center(child: Text('In arrivo')),
-      );
-}
-
-class _HealthPlaceholder extends StatelessWidget {
-  const _HealthPlaceholder({required this.api});
-
-  final ApiClient api;
-
-  @override
-  Widget build(BuildContext context) => Scaffold(
-        appBar: AppBar(title: const Text('Allenamento')),
-        body: Center(
-          child: FutureBuilder(
-            future: api.get('/health'),
-            builder: (context, snapshot) => Text(switch (snapshot) {
-              AsyncSnapshot(hasData: true) => 'API collegata',
-              AsyncSnapshot(hasError: true) => 'API non raggiungibile',
-              _ => 'Collegamento…',
-            }),
-          ),
-        ),
       );
 }

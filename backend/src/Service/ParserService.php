@@ -110,6 +110,7 @@ final class ParserService
         - "exercise": nome pulito con l'iniziale maiuscola (es. "Panca piana"). Se nel messaggio non c'è un esercizio, usa null: vale l'esercizio corrente.
         - "typed_name": solo il nome dell'esercizio come l'ha scritto l'utente (es. "dips", "panca"), senza numeri. Se il messaggio non nomina un esercizio, usa null.
         - "matched_existing_id": se l'esercizio è lo stesso di uno di quelli dell'utente (anche scritto diversamente, al plurale, abbreviato o in un sinonimo, es. "dips"/"parallele" per "Dip"), metti il suo id; altrimenti null. Usa SOLO id di questo elenco.
+        - "weighted": true SOLO per esercizi a corpo libero a cui si aggiunge una zavorra (dip, trazioni, piegamenti, affondi a corpo libero…). Per esercizi con bilanciere, manubri o macchine (panca, squat, stacco, curl, pressa…) è sempre false.
         - Esercizi a corpo libero senza peso: weight_kg = 0. "+10" o "con 10 kg di zavorra" = 10 e "weighted": true.
         - "3 serie da 8 con 45" = tre serie uguali di 45 kg × 8.
         - Se non è chiaro quale numero sono i kg e quale le ripetizioni, NON indovinare: rispondi con una domanda (es. "8 sono le ripetizioni o i kg?").

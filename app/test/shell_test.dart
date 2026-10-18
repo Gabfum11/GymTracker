@@ -6,9 +6,10 @@ import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 
 void main() {
+  // nessun allenamento in corso: /workouts/current risponde null
   ApiClient fakeApi() => ApiClient(
         baseUrl: 'http://api.test',
-        httpClient: MockClient((_) async => http.Response('{"ok":true}', 200)),
+        httpClient: MockClient((_) async => http.Response('null', 200)),
       );
 
   testWidgets('la barra in basso ha le 4 voci', (tester) async {
@@ -19,11 +20,11 @@ void main() {
     }
   });
 
-  testWidgets('la tab Allena mostra che l\'API risponde', (tester) async {
+  testWidgets('senza allenamento in corso, Allena mostra "Inizia allenamento"', (tester) async {
     await tester.pumpWidget(MaterialApp(home: Shell(api: fakeApi())));
     await tester.pumpAndSettle();
 
-    expect(find.text('API collegata'), findsOneWidget);
+    expect(find.text('Inizia allenamento'), findsOneWidget);
   });
 
   testWidgets('toccando una voce si cambia schermata', (tester) async {

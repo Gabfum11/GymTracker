@@ -42,7 +42,14 @@ ThemeData buildTheme() {
   );
 
   return base.copyWith(
-    textTheme: base.textTheme.apply(bodyColor: AppColors.ink, displayColor: AppColors.ink),
+    // le schermate usano questi stili (Theme.of(context).textTheme.xxx) invece di scegliere i caratteri a mano
+    textTheme: base.textTheme
+        .copyWith(
+          headlineSmall: displayStyle(size: 26), // numeri grandi (kg, ripetizioni)
+          titleLarge: displayStyle(size: 24), // titolo di una scheda
+          titleMedium: displayStyle(size: 18, weight: FontWeight.w600), // nome dell'esercizio in un elenco
+        )
+        .apply(bodyColor: AppColors.ink, displayColor: AppColors.ink),
     appBarTheme: AppBarTheme(
       backgroundColor: AppColors.screen,
       foregroundColor: AppColors.ink,
