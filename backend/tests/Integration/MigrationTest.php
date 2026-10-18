@@ -13,10 +13,10 @@ final class MigrationTest extends DbTestCase
     {
         $tables = $this->pdo
             ->query("SELECT table_name FROM information_schema.tables WHERE table_schema = 'public' ORDER BY table_name")
-            ->fetchAll(\PDO::FETCH_COLUMN);
+            ->fetchAll(\PDO::FETCH_COLUMN); //chiede al db tutta la lista delle sue tabelle
 
         foreach (['auth_tokens', 'exercises', 'schema_migrations', 'sets', 'users', 'workouts'] as $table) {
-            $this->assertContains($table, $tables);
+            $this->assertContains($table, $tables); //verifica con le tabelle attese
         }
     }
 
@@ -25,10 +25,11 @@ final class MigrationTest extends DbTestCase
         $userId = $this->createUser();
         $this->pdo->prepare('INSERT INTO workouts (user_id) VALUES (?)')->execute([$userId]);
 
-        try {
+        try { //prova ad avviare un secondo allenamento senza chiudere il primo, il db deve rifiutarlo
             $this->pdo->prepare('INSERT INTO workouts (user_id) VALUES (?)')->execute([$userId]);
-            $this->fail('Un secondo allenamento aperto doveva essere rifiutato');
+            $this->fail('Un secondo allenamento aperto doveva essere rifiutato'); //se il secondo inserimento passa vuol dire che la regola non funziona
         } catch (PDOException $e) {
+            //controlla che l'errore sia proprio il codice 23505 cioè una regola che vieta i duplicati
             $this->assertSame('23505', $e->getCode()); // 23505 = violazione di un vincolo UNIQUE
         }
     }
@@ -36,7 +37,7 @@ final class MigrationTest extends DbTestCase
     public function test_migrations_are_applied_only_once(): void
     {
         $applied = \App\Migrator::run($this->pdo, __DIR__ . '/../../migrations');
-
-        $this->assertSame([], $applied);
+        //verifica che se il migrator viene lanciato di nuovo non applichi niente, cioè restituisca una lista vuota
+        $this->assertSame([], $applied); 
     }
 }

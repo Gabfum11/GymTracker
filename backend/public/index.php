@@ -1,19 +1,22 @@
 <?php
 
-declare(strict_types=1);
+declare(strict_types=1); #attiva i tipi rigidi. Senza, se una funzione vuole un int e le passi "5", PHP lo converte di nascosto.
+#con questa riga dà errore. 
+// Punto d'ingresso del backend: ogni richiesta HTTP che arriva al server passa da qui.
 
-// Punto d'ingresso: il server web manda qui ogni richiesta (come `uvicorn app.main:app` in TrackIt).
 
-use App\AppFactory;
+use App\AppFactory; #app perchè 
 use Dotenv\Dotenv;
 
-require __DIR__ . '/../vendor/autoload.php';
-
+require __DIR__ . '/../vendor/autoload.php'; #il punto unisce le strighe, carica il file autoload.php generato da composer, che a sua volta carica tutte le classi del progetto e delle librerie esterne.
+#l'autoloader è un meccanismo che permette di caricare automaticamente le classi PHP quando vengono utilizzate, senza doverle includere manualmente con require o include. Questo rende il codice più pulito e gestibile, soprattutto in progetti di grandi dimensioni.
 // legge backend/.env se esiste; online le variabili arrivano da Render
-Dotenv::createImmutable(__DIR__ . '/..')->safeLoad();
-
-$app = AppFactory::create([
-    'debug' => ($_ENV['APP_DEBUG'] ?? 'false') === 'true',
+Dotenv::createImmutable(__DIR__ . '/..')->safeLoad(); #legge le variabili d'ambiente dal file .env e mette i valori in  $_ENV
+#createImmutable : se una variabile esiste gia in $_ENV non la sovrascrive. safeLoad: se il file .env non esiste non da errore.
+$app = AppFactory::create([ # :: chiama un metodo statico, cioè di una classe e non di un oggetto.
+    'debug' => ($_ENV['APP_DEBUG'] ?? 'false') === 'true', #se la variabile d'ambiente APP_DEBUG è true, allora il debug è attivo. Se non esiste, il default è false
 ]);
 
 $app->run();
+#legge la richiesta arrivata, la fa passare per i middleware e il controller giusto
+#la cartella si chiama public perché è l'unica accessibile dall'esterno. Tutto il resto del backend non è accessibile direttamente, ma solo tramite questo file.

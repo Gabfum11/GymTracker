@@ -1,5 +1,5 @@
 <?php
-
+//mette alla prova SetValidator.php, ovvero la classe che decide se una serie o un nome di un esercizio si possono salvare
 declare(strict_types=1);
 
 namespace Tests\Unit;
@@ -14,7 +14,10 @@ final class SetValidatorTest extends TestCase
     /** Ogni riga: [dato in ingresso, risultato atteso]. */
     public static function validSets(): array
     {
+        //dati validi che vengono ripuliti
         return [
+             //ogni riga è un caso di prova : se do a setvalidator questo dato, deve restituirmi quest'altro
+             //se il test fallisce viene mostrato il nome del caso es. "virgola italiana"
             'numeri normali'          => [[['weight_kg' => 45, 'reps' => 8]], [['weight_kg' => 45.0, 'reps' => 8]]],
             'virgola italiana'        => [[['weight_kg' => '42,5', 'reps' => '8']], [['weight_kg' => 42.5, 'reps' => 8]]],
             'punto come decimale'     => [[['weight_kg' => '42.5', 'reps' => 8]], [['weight_kg' => 42.5, 'reps' => 8]]],
@@ -32,8 +35,10 @@ final class SetValidatorTest extends TestCase
 
     /** Ogni riga: un dato che deve essere rifiutato. */
     public static function invalidSets(): array
+    //dati sbagliati che devono essere rifiutati
     {
         return [
+
             'kg negativi'             => [[['weight_kg' => -1, 'reps' => 8]]],
             'oltre 500 kg'            => [[['weight_kg' => 500.5, 'reps' => 8]]],
             'non multiplo di 0,25'    => [[['weight_kg' => 42.3, 'reps' => 8]]],
@@ -55,7 +60,7 @@ final class SetValidatorTest extends TestCase
 
         SetValidator::sets($input);
     }
-
+    //il testo dell'errore deve indicare quale serie è sbagliata e il perchè
     public function test_error_message_is_in_italian(): void
     {
         try {
