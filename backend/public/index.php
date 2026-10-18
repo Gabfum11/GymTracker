@@ -6,6 +6,7 @@ declare(strict_types=1); #attiva i tipi rigidi. Senza, se una funzione vuole un 
 
 
 use App\AppFactory; #app perchè
+use App\Ai\GroqClient;
 use App\Database;
 use Dotenv\Dotenv;
 
@@ -17,7 +18,7 @@ Dotenv::createImmutable(__DIR__ . '/..')->safeLoad(); #legge le variabili d'ambi
 $app = AppFactory::create([ # :: chiama un metodo statico, cioè di una classe e non di un oggetto.
     'debug' => ($_ENV['APP_DEBUG'] ?? 'false') === 'true', #se la variabile d'ambiente APP_DEBUG è true, allora il debug è attivo. Se non esiste, il default è false
     'dev_user_id' => (int) ($_ENV['DEV_USER_ID'] ?? 1), // utente fisso finché non c'è il login (passo 9)
-], Database::connect($_ENV));
+], Database::connect($_ENV), empty($_ENV['GROQ_API_KEY']) ? null : new GroqClient($_ENV['GROQ_API_KEY'], $_ENV['GROQ_MODEL'] ?? 'openai/gpt-oss-20b'));
 
 $app->run();
 #legge la richiesta arrivata, la fa passare per i middleware e il controller giusto

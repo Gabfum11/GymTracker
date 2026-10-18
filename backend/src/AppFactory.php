@@ -4,7 +4,11 @@ declare(strict_types=1);
 
 namespace App; #dichiara che questa classe vive nel namespace APP, quindi il suo Nome completo è App\AppFactory. 
 #gli import. l'ultimo è un alias, perché AppFactory è già il nome della classe che stiamo scrivendo.
+use App\Ai\LlmClient;
+use App\Ai\LlmException;
 use App\Http\ExerciseController;
+use App\Http\ParseController;
+use App\Service\ParserService;
 use App\Http\HealthController;
 use App\Http\JsonResponse;
 use App\Http\WorkoutController;
@@ -31,7 +35,7 @@ final class AppFactory
 #si chiama factory perchè è una funzione il cui unico compito è costruire un oggetto complicato e restituirlo pronto all'uso.
 #final vuol dire che nessuno può creare una sottoclasse di AppFactory dice a chi legge " questa classe è completa così"
 {
-    public static function create(array $config = [], ?PDO $pdo = null): App #public indica che si può chiamare da altri file, sulla classe, senza creare un oggetto con new (static)
+    public static function create(array $config = [], ?PDO $pdo = null, ?LlmClient $llm = null): App #public indica che si può chiamare da altri file, sulla classe, senza creare un oggetto con new (static)
     #app è il tipo di ritorno, cioè restituisce un'app Slim. Il tipo di ritorno è opzionale, ma aiuta a capire cosa fa la funzione e permette a PHP di controllare che il valore restituito sia del tipo giusto.
     {
         $app = SlimAppFactory::create(); #crea l'app vuota di Slim
@@ -50,6 +54,12 @@ final class AppFactory
                 return JsonResponse::with($app->getResponseFactory()->createResponse(), ['error' => $e->getMessage()], $status);
             });
         }
+        // l'AI non risponde: messaggio fisso, i dettagli tecnici (che possono contenere la risposta di Groq) restano nel log
+        $errors->setErrorHandler(LlmException::class, function (ServerRequestInterface $request, \Throwable $e) use ($app) {
+            error_log('LLM: ' . $e->getMessage());
+
+            return JsonResponse::with($app->getResponseFactory()->createResponse(), ['error' => 'Il bot non risponde, riprova tra poco'], 503);
+        });
 
 
         $app->get('/health', HealthController::class);
@@ -58,20 +68,24 @@ final class AppFactory
         //registra la rotta version, che risponde con il numero di versione dell'app
 
         if ($pdo !== null) {
-            self::addApiRoutes($app, $pdo, $config);
+            self::addApiRoutes($app, $pdo, $config, $llm);
         }
 
         return $app;
     }
 
     /** Le rotte che usano il database. Le dipendenze si creano qui, a mano, dal basso verso l'alto. */
-    private static function addApiRoutes(App $app, PDO $pdo, array $config): void
+    private static function addApiRoutes(App $app, PDO $pdo, array $config, ?LlmClient $llm): void
     {
         $exerciseRepo = new ExerciseRepository($pdo);
         $workouts = new WorkoutController(new WorkoutService(new WorkoutRepository($pdo), $exerciseRepo, new SetRepository($pdo)));
         $exercises = new ExerciseController($exerciseRepo);
+        $parse = $llm ? new ParseController(new ParserService($llm), $exerciseRepo) : null;
 
-        $app->group('', function (RouteCollectorProxy $api) use ($workouts, $exercises) {
+        $app->group('', function (RouteCollectorProxy $api) use ($workouts, $exercises, $parse) {
+            if ($parse) { // senza chiave AI (es. alcuni test) la rotta semplicemente non c'è
+                $api->post('/parse', $parse);
+            }
             $api->get('/exercises', [$exercises, 'list']);
             $api->post('/exercises', [$exercises, 'create']);
             $api->post('/workouts', [$workouts, 'start']);
