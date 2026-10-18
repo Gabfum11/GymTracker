@@ -6,6 +6,7 @@ namespace App; #dichiara che questa classe vive nel namespace APP, quindi il suo
 #gli import. l'ultimo è un alias, perché AppFactory è già il nome della classe che stiamo scrivendo.
 use App\Ai\LlmClient;
 use App\Ai\LlmException;
+use App\Http\CorsMiddleware;
 use App\Http\ExerciseController;
 use App\Http\ParseController;
 use App\Service\ParserService;
@@ -70,6 +71,9 @@ final class AppFactory
         if ($pdo !== null) {
             self::addApiRoutes($app, $pdo, $config, $llm);
         }
+
+        // aggiunto per ultimo = strato più esterno: mette gli header CORS anche sulle risposte di errore
+        $app->add(new CorsMiddleware($app->getResponseFactory(), $config['cors_origin'] ?? '*'));
 
         return $app;
     }
