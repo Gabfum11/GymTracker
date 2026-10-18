@@ -47,24 +47,6 @@ browser/curl ──► public/index.php ──► AppFactory (rotte) ──► H
 | `tests/` + PHPUnit | `tests/` + pytest |
 | `.env` + phpdotenv | `.env` + python-dotenv |
 
-## Senza framework (PHP puro) — per riconoscere il codice legacy
-
-```php
-<?php
-$method = $_SERVER['REQUEST_METHOD'];
-$path   = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
-header('Content-Type: application/json');
-
-if ($method === 'GET' && $path === '/health') {
-    echo json_encode(['ok' => true]);
-} else {
-    http_response_code(404);
-    echo json_encode(['error' => 'Non trovato']);
-}
-```
-
-Funziona, ma il router, la lettura del JSON, i middleware e gli errori andrebbero scritti a mano, e il codice dipende da variabili globali (`$_SERVER`, `echo`), quindi è difficile da testare. Slim fa esattamente e solo questa parte.
-
 ## In Laravel sarebbe…
 
 ```php
