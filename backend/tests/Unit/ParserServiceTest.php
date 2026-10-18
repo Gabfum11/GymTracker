@@ -60,6 +60,22 @@ final class ParserServiceTest extends TestCase
         $this->assertSame(12, $result['matched_existing_id']);
     }
 
+    public function test_missing_typed_name_falls_back_to_exercise_name(): void
+    {
+        $result = $this->parseWith('{"type":"sets","exercise":null,"typed_name":null,"sets":[{"weight_kg":45,"reps":8}]}', '45x8', 'Dip zavorrati');
+
+        $this->assertSame('Dip zavorrati', $result['typed_name']);
+    }
+
+    public function test_prompt_asks_typed_name_without_numbers(): void
+    {
+        $fake = new FakeLlmClient('{"type":"question","text":"?"}');
+
+        (new ParserService($fake))->parse('45x8', [], null, null);
+
+        $this->assertStringContainsString('"typed_name": solo il nome dell\'esercizio', $fake->lastSystem);
+    }
+
     public function test_question_is_passed_through(): void
     {
         $result = $this->parseWith('{"type":"question","text":"8 sono le ripetizioni o i kg?"}');

@@ -63,6 +63,25 @@ Le impostazioni della chiamata (in `GroqClient`):
 
 La chiave sta solo sul server (`.env` → `GROQ_API_KEY`), mai nell'app.
 
+## La prova con Groq vero (18 ottobre)
+
+| Frase | Risultato |
+|---|---|
+| "dip 45kg 8" | Dip zavorrati (riconosciuto), 45 × 8 |
+| "45x8, 45x6, 40x8" (esercizio corrente: Dip) | 3 serie |
+| "la prima 45 per 8, poi 45 per 6, l'ultima 40 per 8" | 3 serie |
+| "3 serie da 8 con 80 di panca" | Panca piana (riconosciuta), 3 × 80 kg × 8 |
+| "trazioni senza peso 10, 9, 8" | Trazioni (nuovo), 0 kg × 10/9/8 |
+| "parallele +20 per 6" | Dip zavorrati (sinonimo riconosciuto), zavorra 20 kg |
+| "squat 8 10" | **domanda**: "8 sono le ripetizioni o i kg?" |
+| "la seconda erano 7" (scheda 45×8, 45×6) | serie corrette: 45×8, **45×7** |
+
+Circa **1 secondo** per frase. La prova ha trovato un difetto (`typed_name` conteneva tutta la frase): corretto con una regola nel prompt e un test.
+
+**Due cose imparate:**
+- **Certificati su Windows.** Il primo tentativo ha dato `SSL certificate problem`. PHP su Windows non sa dove sono i certificati per verificare le connessioni HTTPS. La soluzione giusta **non** è disattivare il controllo (sarebbe una falla di sicurezza), ma indicarli nel `php.ini`: `curl.cainfo` e `openssl.cafile` puntano a `D:/Git/mingw64/etc/ssl/certs/ca-bundle.crt`. Su Render (Linux) non serve.
+- **Limite del piano gratuito di Groq**: 8000 token al minuto. Ogni messaggio ne usa circa 1000, quindi circa 8 messaggi al minuto. Superato il limite Groq risponde `429`, che diventa il nostro 503 "Il bot non risponde, riprova tra poco". Per una persona che si allena basta e avanza.
+
 ## Novità di PHP
 
 - **`interface`** e **`implements`**: vedi sopra.
