@@ -13,7 +13,7 @@
 ## Global Constraints
 
 - Il codice lo studia un principiante che al colloquio deve spiegarlo: soluzioni da manuale, niente trucchi; ogni file ha una sola responsabilità; commenti solo sul *perché*.
-- **Ogni task chiude con** `docs/appunti/NN-<slug>.md` (sezioni: *Cosa fa* · *Perché così* · *Come in TrackIt* (analogia con `D:\FinanceApp`: FastAPI router ↔ Controller, `business_logic` ↔ Service, SQLAlchemy ↔ Repository/PDO, pytest ↔ PHPUnit, React Native ↔ Flutter) · *Domande da colloquio* (3) · *Prova per te* (una piccola modifica da fare da solo)). Un commit per task, messaggio in italiano.
+- **Ogni task chiude con** `docs/appunti/NN-<slug>.md` (sezioni: *Cosa fa* · *Perché così* · *Come in TrackIt* (analogia con `D:\FinanceApp`: FastAPI router ↔ Controller, `business_logic` ↔ Service, SQLAlchemy ↔ Repository/PDO, pytest ↔ PHPUnit, React Native ↔ Flutter) · *In Laravel sarebbe…* (lo stesso concetto con i nomi di Laravel: rotte, middleware, Eloquent, Form Request, Sanctum, Artisan — l'utente ha scelto Slim ma deve saper rispondere su Laravel) · *Domande da colloquio* (3) · *Prova per te* (una piccola modifica da fare da solo)). Un commit per task, messaggio in italiano.
 - Validazione (spec §5.2): kg 0–500, multipli di 0,25; rip intere 1–100; nome esercizio non vuoto, ≤ 60 caratteri. Vale per input del client **e** output dell'AI.
 - SQL solo con prepared statements PDO. Nessun dato salvato senza conferma esplicita dell'utente (la risposta dell'AI non tocca mai il DB).
 - Segreti (`GROQ_API_KEY`, password DB) solo in `.env` / variabili d'ambiente; `.env` in `.gitignore`.

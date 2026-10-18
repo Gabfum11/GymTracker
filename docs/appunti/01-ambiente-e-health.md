@@ -47,6 +47,35 @@ browser/curl ──► public/index.php ──► AppFactory (rotte) ──► H
 | `tests/` + PHPUnit | `tests/` + pytest |
 | `.env` + phpdotenv | `.env` + python-dotenv |
 
+## Senza framework (PHP puro) — per riconoscere il codice legacy
+
+```php
+<?php
+$method = $_SERVER['REQUEST_METHOD'];
+$path   = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
+header('Content-Type: application/json');
+
+if ($method === 'GET' && $path === '/health') {
+    echo json_encode(['ok' => true]);
+} else {
+    http_response_code(404);
+    echo json_encode(['error' => 'Non trovato']);
+}
+```
+
+Funziona, ma il router, la lettura del JSON, i middleware e gli errori andrebbero scritti a mano, e il codice dipende da variabili globali (`$_SERVER`, `echo`), quindi è difficile da testare. Slim fa esattamente e solo questa parte.
+
+## In Laravel sarebbe…
+
+```php
+// routes/api.php
+Route::get('/health', fn () => ['ok' => true]);
+```
+
+Laravel converte da solo l'array in JSON (come FastAPI). Il punto d'ingresso è sempre `public/index.php`, la configurazione è `bootstrap/app.php` (il nostro `AppFactory`), gli errori li gestisce `bootstrap/app.php` → `withExceptions()`.
+
+**Perché Slim** (risposta da colloquio): *"Ho scelto Slim per avere il controllo di ogni livello e capire bene HTTP, middleware e SQL in PHP. In Laravel le stesse cose sono le rotte in `routes/api.php`, i middleware di Laravel, Eloquent e Sanctum."*
+
 ## Il test
 
 `tests/Unit/HealthTest.php` crea l'app, le manda una richiesta `GET /health` finta e controlla tre cose: codice 200, header JSON, corpo `{"ok": true}`.
