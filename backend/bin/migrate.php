@@ -14,7 +14,24 @@ require __DIR__ . '/../vendor/autoload.php'; //carica il file autoload.php dopo 
 //chiama un metodo statico sulla classe Dotenv e ottiene un oggetto
 Dotenv::createImmutable(__DIR__ . '/..')->safeLoad(); //chiama safeLoad su quell'oggetto (legge il .env)
 
-$applied = Migrator::run(Database::connect($_ENV), __DIR__ . '/../migrations');
+$env = $_ENV + getenv(); // come index.php: variabili del .env + quelle del sistema (Render)
+
+try {
+    $pdo = Database::connect($env);
+} catch (PDOException $e) {
+    // per capire cosa legge davvero il server, senza mai stampare la password: solo quanto è lunga
+    fwrite(STDERR, sprintf(
+        "Connessione al database fallita.\n  host: %s\n  user: %s\n  password: %d caratteri%s\n  errore: %s\n",
+        $env['DB_HOST'] ?? '(manca DB_HOST)',
+        $env['DB_USER'] ?? '(manca DB_USER)',
+        strlen($env['DB_PASSWORD'] ?? ''),
+        isset($env['DB_PASSWORD']) ? '' : ' (manca DB_PASSWORD!)',
+        $e->getMessage(),
+    ));
+    exit(1);
+}
+
+$applied = Migrator::run($pdo, __DIR__ . '/../migrations');
 
 echo $applied === [] ? "niente da applicare\n" : 'applicata ' . implode(', ', $applied) . "\n";
 
