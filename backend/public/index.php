@@ -8,6 +8,8 @@ declare(strict_types=1); #attiva i tipi rigidi. Senza, se una funzione vuole un 
 use App\AppFactory; #app perchè
 use App\Ai\GroqClient;
 use App\Database;
+use App\Mail\BrevoMailer;
+use App\Mail\LogMailer;
 use Dotenv\Dotenv;
 
 require __DIR__ . '/../vendor/autoload.php'; #il punto unisce le strighe, carica il file autoload.php generato da composer, che a sua volta carica tutte le classi del progetto e delle librerie esterne.
@@ -17,9 +19,15 @@ Dotenv::createImmutable(__DIR__ . '/..')->safeLoad(); #legge le variabili d'ambi
 #createImmutable : se una variabile esiste gia in $_ENV non la sovrascrive. safeLoad: se il file .env non esiste non da errore.
 $app = AppFactory::create([ # :: chiama un metodo statico, cioè di una classe e non di un oggetto.
     'debug' => ($_ENV['APP_DEBUG'] ?? 'false') === 'true', #se la variabile d'ambiente APP_DEBUG è true, allora il debug è attivo. Se non esiste, il default è false
-    'dev_user_id' => (int) ($_ENV['DEV_USER_ID'] ?? 1), // utente fisso finché non c'è il login (passo 9)
     'cors_origin' => $_ENV['CORS_ORIGIN'] ?? '*', // online: l'indirizzo di GitHub Pages
-], Database::connect($_ENV), empty($_ENV['GROQ_API_KEY']) ? null : new GroqClient($_ENV['GROQ_API_KEY'], $_ENV['GROQ_MODEL'] ?? 'openai/gpt-oss-20b'));
+    'jwt_secret' => $_ENV['JWT_SECRET'] ?? '', // firma dei token: senza (o troppo corto) il server non parte
+    'trust_proxy' => ($_ENV['TRUST_PROXY'] ?? 'false') === 'true', // su Render: l'IP vero sta in X-Forwarded-For
+],
+    Database::connect($_ENV),
+    empty($_ENV['GROQ_API_KEY']) ? null : new GroqClient($_ENV['GROQ_API_KEY'], $_ENV['GROQ_MODEL'] ?? 'openai/gpt-oss-20b'),
+    // senza chiave Brevo (in locale) le email finiscono nel terminale del server
+    empty($_ENV['BREVO_API_KEY']) ? new LogMailer() : new BrevoMailer($_ENV['BREVO_API_KEY'], $_ENV['MAIL_FROM'] ?? ''),
+);
 
 $app->run();
 #legge la richiesta arrivata, la fa passare per i middleware e il controller giusto

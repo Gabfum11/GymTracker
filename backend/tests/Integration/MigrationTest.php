@@ -15,7 +15,7 @@ final class MigrationTest extends DbTestCase
             ->query("SELECT table_name FROM information_schema.tables WHERE table_schema = 'public' ORDER BY table_name")
             ->fetchAll(\PDO::FETCH_COLUMN); //chiede al db tutta la lista delle sue tabelle
 
-        foreach (['auth_tokens', 'exercises', 'schema_migrations', 'sets', 'users', 'workouts'] as $table) {
+        foreach (['exercises', 'otp_codes', 'rate_limits', 'refresh_tokens', 'schema_migrations', 'sets', 'users', 'workouts'] as $table) {
             $this->assertContains($table, $tables); //verifica con le tabelle attese
         }
     }

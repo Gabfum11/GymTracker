@@ -6,6 +6,7 @@ namespace App\Http;
 
 use App\Repository\ExerciseRepository;
 use App\Service\ParserService;
+use App\Service\RateLimiter;
 use App\Service\SetValidator;
 use App\Service\ValidationException;
 use Psr\Http\Message\ResponseInterface as Response;
@@ -16,8 +17,12 @@ final class ParseController
 {
     private const MAX_TEXT = 500;
 
-    public function __construct(private ParserService $parser, private ExerciseRepository $exercises)
-    {
+    public function __construct(
+        private ParserService $parser,
+        private ExerciseRepository $exercises,
+        private RateLimiter $limiter,
+        private int $dailyLimit,
+    ) {
     }
 
     public function __invoke(Request $request, Response $response): Response
@@ -27,6 +32,9 @@ final class ParseController
         if ($text === '' || mb_strlen($text) > self::MAX_TEXT) {
             throw new ValidationException('Scrivi un messaggio (al massimo ' . self::MAX_TEXT . ' caratteri)');
         }
+
+        // ogni messaggio costa una chiamata a Groq: limite al giorno per utente (le credenziali demo sono pubbliche)
+        $this->limiter->check('parse:' . $request->getAttribute('user_id'), $this->dailyLimit, 86400, 'Hai raggiunto il limite di messaggi per oggi');
 
         $current = isset($body['current_exercise']) ? (string) $body['current_exercise'] : null;
         $userExercises = array_map(fn ($e) => [

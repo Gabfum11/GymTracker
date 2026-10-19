@@ -6,21 +6,16 @@ namespace Tests\Integration;
 
 use App\Ai\LlmException;
 use App\AppFactory;
-use Slim\Psr7\Factory\ServerRequestFactory;
 use Tests\Support\DbTestCase;
 use Tests\Support\FakeLlmClient;
 
 final class ParseApiTest extends DbTestCase
 {
-    private function parse(FakeLlmClient $llm, array $body): array
+    private function parse(FakeLlmClient $llm, array $body, array $config = []): array
     {
-        $app = AppFactory::create(['dev_user_id' => $this->createUser()], $this->pdo, $llm);
-        $request = (new ServerRequestFactory())->createServerRequest('POST', '/parse')
-            ->withHeader('Content-Type', 'application/json');
-        $request->getBody()->write(json_encode($body));
-        $response = $app->handle($request);
+        $app = AppFactory::create(['jwt_secret' => self::JWT_SECRET] + $config, $this->pdo, $llm);
 
-        return [$response->getStatusCode(), json_decode((string) $response->getBody(), true)];
+        return $this->request($app, 'POST', '/parse', $body, $this->tokenFor($this->createUser()));
     }
 
     public function test_parse_returns_the_parser_result(): void
@@ -52,13 +47,26 @@ final class ParseApiTest extends DbTestCase
     public function test_user_exercises_are_sent_to_the_ai(): void
     {
         $llm = new FakeLlmClient('{"type":"question","text":"?"}');
-        $app = AppFactory::create(['dev_user_id' => $userId = $this->createUser()], $this->pdo, $llm);
+        $app = AppFactory::create(['jwt_secret' => self::JWT_SECRET], $this->pdo, $llm);
+        $userId = $this->createUser();
         $this->pdo->prepare("INSERT INTO exercises (user_id, name) VALUES (?, 'Panca piana')")->execute([$userId]);
-        $request = (new ServerRequestFactory())->createServerRequest('POST', '/parse')->withHeader('Content-Type', 'application/json');
-        $request->getBody()->write('{"text":"panca 80 per 5"}');
 
-        $app->handle($request);
+        $this->request($app, 'POST', '/parse', ['text' => 'panca 80 per 5'], $this->tokenFor($userId));
 
         $this->assertStringContainsString('Panca piana', $llm->lastSystem);
+    }
+
+    public function test_parse_over_daily_limit_returns_429(): void
+    {
+        $llm = new FakeLlmClient('{"type":"question","text":"?"}');
+        $app = AppFactory::create(['jwt_secret' => self::JWT_SECRET, 'parse_limit' => 2], $this->pdo, $llm);
+        $token = $this->tokenFor($this->createUser());
+
+        $this->request($app, 'POST', '/parse', ['text' => 'uno'], $token);
+        $this->request($app, 'POST', '/parse', ['text' => 'due'], $token);
+        [$status, $body] = $this->request($app, 'POST', '/parse', ['text' => 'tre'], $token);
+
+        $this->assertSame(429, $status);
+        $this->assertSame('Hai raggiunto il limite di messaggi per oggi', $body['error']);
     }
 }

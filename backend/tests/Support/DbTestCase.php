@@ -6,8 +6,11 @@ namespace Tests\Support;
 
 use App\Database;
 use App\Migrator;
+use App\Service\TokenService;
 use PDO;
 use PHPUnit\Framework\TestCase;
+use Slim\App;
+use Slim\Psr7\Factory\ServerRequestFactory;
 
 /**
  * Base per i test che usano il database: prima di ogni test applica le migrazioni
@@ -21,7 +24,7 @@ abstract class DbTestCase extends TestCase
     {
         $this->pdo = Database::connect($_ENV); //si collega al db
         Migrator::run($this->pdo, __DIR__ . '/../../migrations'); //esegue le migrazioni con il migrator
-        $this->pdo->exec('TRUNCATE users, auth_tokens, exercises, workouts, sets RESTART IDENTITY CASCADE');
+        $this->pdo->exec('TRUNCATE users, refresh_tokens, otp_codes, rate_limits, exercises, workouts, sets RESTART IDENTITY CASCADE');
         //svuota tutte le tabelle con truncate, cosi ogni test parte da un db pulito e non risente dei dati lasciati da un altro
     }
 
@@ -32,5 +35,30 @@ abstract class DbTestCase extends TestCase
         $stmt->execute(['Test', $email, 'x']);
 
         return (int) $stmt->fetchColumn();
+    }
+
+    /** Segreto per firmare i JWT nei test (in produzione arriva da JWT_SECRET). */
+    protected const JWT_SECRET = 'segreto-dei-test-lungo-almeno-32-caratteri!!';
+
+    /** Un access token valido per l'utente, senza passare dal login. */
+    protected function tokenFor(int $userId): string
+    {
+        return (new TokenService(self::JWT_SECRET))->accessToken($userId, 0);
+    }
+
+    /** Manda una richiesta all'app e restituisce [codice HTTP, corpo JSON già decodificato]. */
+    protected function request(App $app, string $method, string $path, ?array $body = null, ?string $token = null, string $ip = '10.0.0.1'): array
+    {
+        $request = (new ServerRequestFactory())->createServerRequest($method, $path, ['REMOTE_ADDR' => $ip]);
+        if ($token !== null) {
+            $request = $request->withHeader('Authorization', "Bearer $token");
+        }
+        if ($body !== null) {
+            $request = $request->withHeader('Content-Type', 'application/json');
+            $request->getBody()->write(json_encode($body));
+        }
+        $response = $app->handle($request);
+
+        return [$response->getStatusCode(), json_decode((string) $response->getBody(), true)];
     }
 }

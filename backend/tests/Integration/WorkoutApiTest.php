@@ -6,30 +6,24 @@ namespace Tests\Integration;
 
 use App\AppFactory;
 use Slim\App;
-use Slim\Psr7\Factory\ServerRequestFactory;
 use Tests\Support\DbTestCase;
 
 final class WorkoutApiTest extends DbTestCase
 {
     private App $app;
+    private string $token;
 
     protected function setUp(): void
     {
         parent::setUp(); // prepara il database pulito (DbTestCase)
-        $this->app = AppFactory::create(['dev_user_id' => $this->createUser()], $this->pdo);
+        $this->app = AppFactory::create(['jwt_secret' => self::JWT_SECRET], $this->pdo);
+        $this->token = $this->tokenFor($this->createUser());
     }
 
-    /** Manda una richiesta all'app e restituisce [codice HTTP, corpo JSON già decodificato]. */
+    /** Una richiesta come utente loggato. */
     private function call(string $method, string $path, ?array $body = null): array
     {
-        $request = (new ServerRequestFactory())->createServerRequest($method, $path);
-        if ($body !== null) {
-            $request = $request->withHeader('Content-Type', 'application/json');
-            $request->getBody()->write(json_encode($body));
-        }
-        $response = $this->app->handle($request);
-
-        return [$response->getStatusCode(), json_decode((string) $response->getBody(), true)];
+        return $this->request($this->app, $method, $path, $body, $this->token);
     }
 
     private function createExercise(string $name): int
