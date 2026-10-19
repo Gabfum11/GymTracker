@@ -8,7 +8,7 @@ import 'package:http/testing.dart';
 /// e lui si ricorda tutte le chiamate ricevute (in ordine), con il corpo JSON.
 class FakeBackend {
   final Map<String, Object? Function(Map<String, dynamic>? body)> _routes = {};
-  final List<({String route, Map<String, dynamic>? body})> calls = [];
+  final List<({String route, Map<String, dynamic>? body, String? auth})> calls = [];
 
   /// Risponde 200 con [answer] (oppure con il risultato della funzione, se è una funzione).
   void on(String route, Object? answer) =>
@@ -16,7 +16,7 @@ class FakeBackend {
 
   /// Risponde con un errore HTTP.
   void fail(String route, int status, String message) =>
-      _routes[route] = (_) => _HttpError(status, message);
+      _routes[route] = (_) => HttpError(status, message);
 
   List<String> get routes => [for (final c in calls) c.route];
 
@@ -25,18 +25,19 @@ class FakeBackend {
         httpClient: MockClient((request) async {
           final route = '${request.method} ${request.url.path}';
           final body = request.body.isEmpty ? null : jsonDecode(request.body) as Map<String, dynamic>;
-          calls.add((route: route, body: body));
+          calls.add((route: route, body: body, auth: request.headers['Authorization']));
           final handler = _routes[route];
           if (handler == null) return http.Response('{"error":"rotta non prevista nel test: $route"}', 404);
           final answer = handler(body);
-          if (answer is _HttpError) return http.Response(jsonEncode({'error': answer.message}), answer.status);
-          return http.Response(jsonEncode(answer), 200);
+          // .bytes + utf8: come il server vero, così "giù" o "è" arrivano intatti
+          if (answer is HttpError) return http.Response.bytes(utf8.encode(jsonEncode({'error': answer.message})), answer.status);
+          return http.Response.bytes(utf8.encode(jsonEncode(answer)), 200);
         }),
       );
 }
 
-class _HttpError {
-  const _HttpError(this.status, this.message);
+class HttpError {
+  const HttpError(this.status, this.message);
   final int status;
   final String message;
 }

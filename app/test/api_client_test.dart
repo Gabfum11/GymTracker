@@ -47,6 +47,18 @@ void main() {
     );
   });
 
+  test('una risposta che non è JSON (es. pagina HTML di errore) diventa ApiException', () async {
+    final api = ApiClient(
+      baseUrl: 'http://api.test',
+      httpClient: MockClient((_) async => http.Response('<html>502 Bad Gateway</html>', 502)),
+    );
+
+    expect(
+      () => api.get('/health'),
+      throwsA(isA<ApiException>().having((e) => e.message, 'message', 'Il server non risponde, riprova tra poco')),
+    );
+  });
+
   test('server irraggiungibile → ApiException con status 0', () async {
     final api = ApiClient(
       baseUrl: 'http://api.test',

@@ -16,8 +16,12 @@ class ApiClient {
 
   final String baseUrl;
 
-  /// Il token di login (dal passo 9); null = non ancora autenticato.
+  /// L'access token (JWT, 15 minuti); null = non autenticato.
   String? token;
+
+  /// Chiamato quando il server risponde 401: deve procurare un access token nuovo
+  /// (con il refresh token) e restituirlo, oppure null se la sessione è finita. Lo imposta AuthViewModel.
+  Future<String?> Function()? onUnauthorized;
 
   final http.Client _http;
 
@@ -27,7 +31,7 @@ class ApiClient {
 
   Future<dynamic> put(String path, [Object? body]) => _send('PUT', path, body);
 
-  Future<dynamic> _send(String method, String path, [Object? body]) async {
+  Future<dynamic> _send(String method, String path, [Object? body, bool retried = false]) async {
     final request = http.Request(method, Uri.parse('$baseUrl$path'))
       ..headers['Accept'] = 'application/json';
     if (token != null) request.headers['Authorization'] = 'Bearer $token';
@@ -43,9 +47,20 @@ class ApiClient {
       throw const ApiException(0, 'Server non raggiungibile. Controlla la connessione.');
     }
 
-    // utf8.decode: senza, le lettere accentate ("è") arriverebbero rovinate
-    final text = utf8.decode(response.bodyBytes);
-    final data = text.isEmpty ? null : jsonDecode(text);
+    // access token scaduto: se ne chiede uno nuovo e si riprova UNA volta (le rotte /auth/ no, per non girare in tondo)
+    if (response.statusCode == 401 && !retried && !path.startsWith('/auth/') && onUnauthorized != null) {
+      if (await onUnauthorized!() != null) return _send(method, path, body, true);
+    }
+
+    final Object? data;
+    try {
+      // utf8.decode: senza, le lettere accentate ("è") arriverebbero rovinate
+      final text = utf8.decode(response.bodyBytes);
+      data = text.isEmpty ? null : jsonDecode(text);
+    } on FormatException {
+      // non è il nostro JSON: di solito una pagina di errore del proxy (es. Render che si sta svegliando)
+      throw ApiException(response.statusCode, 'Il server non risponde, riprova tra poco');
+    }
     if (response.statusCode >= 400) {
       final message = data is Map && data['error'] is String ? data['error'] as String : 'Errore ${response.statusCode}';
       throw ApiException(response.statusCode, message);

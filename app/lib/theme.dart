@@ -18,6 +18,8 @@ abstract final class AppColors {
   static const record = Color(0xFFFD923E);
   static const recordSoft = Color(0xFF3C220F);
   static const onRecord = Color(0xFF291507);
+  static const danger = Color(0xFFF47B74); // solo per gli errori
+  static const dangerSoft = Color(0xFF3B1C1A);
 }
 
 /// Barlow Condensed per titoli e numeri, Barlow per il testo.

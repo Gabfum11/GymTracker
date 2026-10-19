@@ -2,13 +2,16 @@ import 'package:flutter/material.dart';
 
 import 'api/api_client.dart';
 import 'features/chat/chat_screen.dart';
+import 'features/auth/auth_view_model.dart';
 import 'features/chat/chat_view_model.dart';
+import 'features/profile/profile_screen.dart';
 
 /// La "cornice" dell'app: la barra in basso con le 4 voci e la schermata scelta.
 class Shell extends StatefulWidget {
-  const Shell({super.key, required this.api});
+  const Shell({super.key, required this.api, required this.auth});
 
   final ApiClient api;
+  final AuthViewModel auth;
 
   @override
   State<Shell> createState() => _ShellState();
@@ -36,7 +39,7 @@ class _ShellState extends State<Shell> {
           ChatScreen(viewModel: _chat),
           const _Placeholder('Storico'),
           const _Placeholder('Progressi'),
-          const _Placeholder('Profilo'),
+          ProfileScreen(auth: widget.auth),
         ],
       ),
       bottomNavigationBar: NavigationBar(
@@ -53,7 +56,7 @@ class _ShellState extends State<Shell> {
   }
 }
 
-// Segnaposto: le schermate vere arrivano nei passi 12, 13 e 14.
+// Segnaposto: le schermate vere arrivano nei passi 12 e 13.
 class _Placeholder extends StatelessWidget {
   const _Placeholder(this.title);
 
