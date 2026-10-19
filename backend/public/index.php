@@ -17,16 +17,18 @@ require __DIR__ . '/../vendor/autoload.php'; #il punto unisce le strighe, carica
 // legge backend/.env se esiste; online le variabili arrivano da Render
 Dotenv::createImmutable(__DIR__ . '/..')->safeLoad(); #legge le variabili d'ambiente dal file .env e mette i valori in  $_ENV
 #createImmutable : se una variabile esiste gia in $_ENV non la sovrascrive. safeLoad: se il file .env non esiste non da errore.
+// le variabili del sistema (Render, Docker) + quelle lette dal .env: dentro Apache non sempre sono già in $_ENV
+$env = $_ENV + getenv();
 $app = AppFactory::create([ # :: chiama un metodo statico, cioè di una classe e non di un oggetto.
-    'debug' => ($_ENV['APP_DEBUG'] ?? 'false') === 'true', #se la variabile d'ambiente APP_DEBUG è true, allora il debug è attivo. Se non esiste, il default è false
-    'cors_origin' => $_ENV['CORS_ORIGIN'] ?? '*', // online: l'indirizzo di GitHub Pages
-    'jwt_secret' => $_ENV['JWT_SECRET'] ?? '', // firma dei token: senza (o troppo corto) il server non parte
-    'trust_proxy' => ($_ENV['TRUST_PROXY'] ?? 'false') === 'true', // su Render: l'IP vero sta in X-Forwarded-For
+    'debug' => ($env['APP_DEBUG'] ?? 'false') === 'true', #se la variabile d'ambiente APP_DEBUG è true, allora il debug è attivo. Se non esiste, il default è false
+    'cors_origin' => $env['CORS_ORIGIN'] ?? '*', // online: l'indirizzo del sito su Render
+    'jwt_secret' => $env['JWT_SECRET'] ?? '', // firma dei token: senza (o troppo corto) il server non parte
+    'trust_proxy' => ($env['TRUST_PROXY'] ?? 'false') === 'true', // su Render: l'IP vero sta in X-Forwarded-For
 ],
-    Database::connect($_ENV),
-    empty($_ENV['GROQ_API_KEY']) ? null : new GroqClient($_ENV['GROQ_API_KEY'], $_ENV['GROQ_MODEL'] ?? 'openai/gpt-oss-20b'),
+    Database::connect($env),
+    empty($env['GROQ_API_KEY']) ? null : new GroqClient($env['GROQ_API_KEY'], $env['GROQ_MODEL'] ?? 'openai/gpt-oss-20b'),
     // senza chiave Brevo (in locale) le email finiscono nel terminale del server
-    empty($_ENV['BREVO_API_KEY']) ? new LogMailer() : new BrevoMailer($_ENV['BREVO_API_KEY'], $_ENV['MAIL_FROM'] ?? ''),
+    empty($env['BREVO_API_KEY']) ? new LogMailer() : new BrevoMailer($env['BREVO_API_KEY'], $env['MAIL_FROM'] ?? ''),
 );
 
 $app->run();

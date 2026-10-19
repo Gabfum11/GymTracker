@@ -59,6 +59,37 @@ void main() {
     );
   });
 
+  test('se la risposta tarda, segnala che il server si sta svegliando', () async {
+    final api = ApiClient(
+      baseUrl: 'http://api.test',
+      slowAfter: const Duration(milliseconds: 20),
+      httpClient: MockClient((_) async {
+        await Future<void>.delayed(const Duration(milliseconds: 80));
+        return http.Response('{"ok":true}', 200);
+      }),
+    );
+
+    final call = api.get('/health');
+    await Future<void>.delayed(const Duration(milliseconds: 50));
+    expect(api.slow.value, isTrue);
+
+    await call;
+    expect(api.slow.value, isFalse);
+  });
+
+  test('una risposta veloce non accende il segnale', () async {
+    final api = ApiClient(
+      baseUrl: 'http://api.test',
+      slowAfter: const Duration(milliseconds: 50),
+      httpClient: MockClient((_) async => http.Response('{"ok":true}', 200)),
+    );
+
+    await api.get('/health');
+    await Future<void>.delayed(const Duration(milliseconds: 80));
+
+    expect(api.slow.value, isFalse);
+  });
+
   test('server irraggiungibile → ApiException con status 0', () async {
     final api = ApiClient(
       baseUrl: 'http://api.test',

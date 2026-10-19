@@ -1,5 +1,7 @@
+import 'dart:async';
 import 'dart:convert';
 
+import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 
 import 'api_exception.dart';
@@ -11,8 +13,12 @@ const apiUrl = String.fromEnvironment('API_URL', defaultValue: 'http://localhost
 /// L'unico punto dell'app che fa richieste HTTP al backend.
 /// Restituisce il JSON già decodificato (Map, List o null) oppure lancia [ApiException].
 class ApiClient {
-  ApiClient({required this.baseUrl, this.token, http.Client? httpClient})
-      : _http = httpClient ?? http.Client();
+  ApiClient({
+    required this.baseUrl,
+    this.token,
+    http.Client? httpClient,
+    this.slowAfter = const Duration(seconds: 4),
+  }) : _http = httpClient ?? http.Client();
 
   final String baseUrl;
 
@@ -24,6 +30,12 @@ class ApiClient {
   Future<String?> Function()? onUnauthorized;
 
   final http.Client _http;
+
+  /// Diventa true quando una richiesta impiega più di [slowAfter]: su Render gratuito
+  /// il server dorme dopo 15 minuti e la prima risposta può arrivare dopo ~1 minuto.
+  final ValueNotifier<bool> slow = ValueNotifier(false);
+  final Duration slowAfter;
+  int _slowRequests = 0;
 
   Future<dynamic> get(String path) => _send('GET', path);
 
@@ -41,10 +53,18 @@ class ApiClient {
     }
 
     final http.Response response;
+    final timer = Timer(slowAfter, () {
+      _slowRequests++;
+      slow.value = true;
+    });
     try {
       response = await http.Response.fromStream(await _http.send(request));
     } on http.ClientException {
       throw const ApiException(0, 'Server non raggiungibile. Controlla la connessione.');
+    } finally {
+      if (!timer.isActive) _slowRequests--; // il timer era scattato: questa richiesta era "lenta"
+      timer.cancel();
+      slow.value = _slowRequests > 0;
     }
 
     // access token scaduto: se ne chiede uno nuovo e si riprova UNA volta (le rotte /auth/ no, per non girare in tondo)

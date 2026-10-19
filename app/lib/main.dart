@@ -24,6 +24,16 @@ class GymTrackerApp extends StatelessWidget {
       title: 'GymTracker',
       debugShowCheckedModeBanner: false,
       theme: buildTheme(),
+      // sopra ogni schermata: l'avviso quando il server (Render gratuito) si sta svegliando
+      builder: (context, child) => Column(
+        children: [
+          ValueListenableBuilder<bool>(
+            valueListenable: api.slow,
+            builder: (context, slow, _) => slow ? const _WakingBanner() : const SizedBox.shrink(),
+          ),
+          Expanded(child: child!),
+        ],
+      ),
       // la "porta d'ingresso": sessione valida → app, altrimenti il flusso di accesso
       home: ListenableBuilder(
         listenable: auth,
@@ -35,4 +45,29 @@ class GymTrackerApp extends StatelessWidget {
       ),
     );
   }
+}
+
+class _WakingBanner extends StatelessWidget {
+  const _WakingBanner();
+
+  @override
+  Widget build(BuildContext context) => Material(
+        color: AppColors.surface2,
+        child: SafeArea(
+          bottom: false,
+          child: Semantics(
+            liveRegion: true,
+            child: const Padding(
+              padding: EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+              child: Row(
+                children: [
+                  SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2)),
+                  SizedBox(width: 10),
+                  Expanded(child: Text('Sto svegliando il server… la prima volta può volerci un minuto.')),
+                ],
+              ),
+            ),
+          ),
+        ),
+      );
 }

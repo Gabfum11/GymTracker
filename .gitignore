@@ -9,3 +9,6 @@ app/.dart_tool/
 
 # file di lavoro di Claude (mockup, ledger)
 .superpowers/
+
+# Flutter scaricato da render-build.sh (solo su Render)
+app/flutter/

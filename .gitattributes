@@ -1,0 +1,3 @@
+# script e Dockerfile girano su Linux (Render): sempre "a capo" in formato Linux
+*.sh text eol=lf
+Dockerfile text eol=lf

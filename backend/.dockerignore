@@ -1,0 +1,5 @@
+# non finiscono nel container: le dipendenze si reinstallano, i segreti arrivano da Render
+vendor/
+.env
+tests/
+.phpunit.cache/
