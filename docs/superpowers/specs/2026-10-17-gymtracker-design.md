@@ -50,7 +50,13 @@ Stile visivo: vedi §8. Tutte le schermate sono pensate prima per il telefono (c
 
 Barra di navigazione in basso, 4 voci con icona: **Allena · Storico · Progressi · Profilo**. La voce attiva ha una "pillola" verde dietro l'icona.
 
-Prima di tutto ci sono **registrazione e login** (nome, email, password).
+Prima di tutto ci sono **registrazione e login** (nome, email, password). Mockup approvato: https://claude.ai/artifact/7WpwVpv3X3agSgxPoYiVyT (versione 2).
+
+- **Benvenuto** (deciso dall'utente): schermata a parte con il nome GymTracker, la frase **"Crea i tuoi allenamenti personalizzati"**, un esempio di conversazione con il bot (domanda → messaggio → scheda con le serie → "2 serie salvate") e il pulsante **Continua** → Accesso. [scelta del builder: compare solo la prima volta su quel dispositivo]
+- **Accesso**: email, password con Mostra/Nascondi, "Password dimenticata?", Accedi, link "Registrati". **Niente pulsante "account demo"** (tolto dall'utente; un account con dati d'esempio per la demo è da decidere più avanti).
+- **Registrazione** (nome, email, password "almeno 8 caratteri") → **Codice** (6 caselle, `autocomplete="one-time-code"`, "rimanda il codice") → app.
+- **Password dimenticata** (email) → **Codice** → **Nuova password** (avvisa che si viene disconnessi da tutti i dispositivi) → Accesso con "Password cambiata. Ora accedi."
+- Errori dei form in **rosso** (nuovo colore, solo per gli errori; l'arancione resta per i record).
 
 ### 4.1 Allena (chat)
 
@@ -195,7 +201,7 @@ La risposta dell'AI non viene mai salvata direttamente: diventa la scheda di con
   - **Database** → Supabase (vedi §6.1). Scartati il Postgres gratuito di Render (scade dopo 30 giorni) e Aiven MySQL (strumento nuovo per l'utente).
   - Scartati gli hosting PHP gratuiti tipo InfinityFree: bloccano le richieste API verso il sito con un controllo JavaScript non disattivabile.
   - Frontend e API su domini diversi → CORS da configurare sull'API.
-- **Account demo** con credenziali nel README e **allenamenti d'esempio** caricati (alcune settimane), così Storico, Progressi e calendario non sono vuoti.
+- **Account con allenamenti d'esempio** per la demo: da decidere più avanti (l'utente ha tolto il pulsante "account demo" dall'accesso).
 - **Piano B**: la stessa app in locale sul portatile.
 - Chiave API solo in variabili d'ambiente / file di configurazione escluso da Git.
 

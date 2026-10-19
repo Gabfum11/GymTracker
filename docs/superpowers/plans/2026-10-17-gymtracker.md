@@ -335,7 +335,7 @@ Tutte le risposte sono JSON. Errori: `{"error": "<messaggio in italiano>"}` con 
 ### Task 10: Accesso nell'app
 
 **Files:**
-- Create: `app/lib/features/auth/{auth_view_model,login_screen,code_screen,reset_screen}.dart`, `app/test/auth_view_model_test.dart`, `docs/appunti/10-login-app.md`
+- Create: `app/lib/features/auth/{auth_view_model,welcome_screen,login_screen,register_screen,code_screen,forgot_screen,reset_screen}.dart` (mockup: https://claude.ai/artifact/7WpwVpv3X3agSgxPoYiVyT v2; benvenuto solo la prima volta, chiave `welcome_seen`), `app/test/auth_view_model_test.dart`, `docs/appunti/10-login-app.md`
 - Modify: `main.dart` (senza sessione → login), `api_client.dart` (Bearer; su 401 prova **una volta** `/auth/refresh` e ripete la richiesta; se fallisce → logout locale), Profilo segnaposto con **Esci**.
 
 **Interfaces:**
