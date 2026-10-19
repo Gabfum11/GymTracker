@@ -129,6 +129,9 @@ final class AppFactory
         $app->post('/auth/login', [$auth, 'login']);
         $app->post('/auth/refresh', [$auth, 'refresh']);
         $app->post('/auth/logout', [$auth, 'logout']);
+        $app->post('/auth/forgot-password', [$auth, 'forgotPassword']);
+        $app->post('/auth/reset-code', [$auth, 'resetCode']);
+        $app->post('/auth/reset-password', [$auth, 'resetPassword']);
 
         // rotte protette: AuthMiddleware controlla il token prima di ogni richiesta del gruppo
         $app->group('', function (RouteCollectorProxy $api) use ($auth, $workouts, $exercises, $parse) {

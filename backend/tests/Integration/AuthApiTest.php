@@ -57,7 +57,7 @@ final class AuthApiTest extends DbTestCase
         $this->assertSame(64, strlen($session['refresh_token']));
         [$status, $me] = $this->call('GET', '/me', null, $session['access_token']);
         $this->assertSame(200, $status);
-        $this->assertSame(['id' => 1, 'name' => 'Mario', 'email' => 'mario@test.it'], $me);
+        $this->assertSame(['id' => $session['user']['id'], 'name' => 'Mario', 'email' => 'mario@test.it'], $me);
     }
 
     public function test_login_after_verification(): void
@@ -168,8 +168,8 @@ final class AuthApiTest extends DbTestCase
 
     public function test_expired_access_token_401(): void
     {
-        $this->registeredUser();
-        $expired = (new TokenService(self::JWT_SECRET))->accessToken(1, 0, null, -10);
+        $userId = $this->registeredUser()['user']['id'];
+        $expired = (new TokenService(self::JWT_SECRET))->accessToken($userId, 0, null, -10);
 
         $this->assertSame(401, $this->call('GET', '/me', null, $expired)[0]);
     }
@@ -243,6 +243,84 @@ final class AuthApiTest extends DbTestCase
 
         $this->assertSame(429, $blocked);
         $this->assertSame(200, $otherIp);
+    }
+
+    /** Recupero password fino al reset_token (codice via email → token). */
+    private function resetToken(string $email = 'mario@test.it'): string
+    {
+        $this->call('POST', '/auth/forgot-password', ['email' => $email]);
+        [, $body] = $this->call('POST', '/auth/reset-code', ['email' => $email, 'code' => $this->mailer->lastCode()]);
+
+        return $body['reset_token'];
+    }
+
+    public function test_forgot_password_with_unknown_email_is_204_and_sends_nothing(): void
+    {
+        [$status] = $this->call('POST', '/auth/forgot-password', ['email' => 'nessuno@test.it']);
+
+        $this->assertSame(204, $status); // stessa risposta: non si rivela chi è registrato
+        $this->assertSame([], $this->mailer->sent);
+    }
+
+    public function test_reset_flow_changes_the_password_and_closes_every_session(): void
+    {
+        $old = $this->registeredUser();
+
+        [$status] = $this->call('POST', '/auth/reset-password', ['reset_token' => $this->resetToken(), 'password' => 'nuovapass1']);
+
+        $this->assertSame(204, $status);
+        $this->assertSame('Recupero password GymTracker', end($this->mailer->sent)['subject']);
+        $this->assertSame(200, $this->call('POST', '/auth/login', ['email' => 'mario@test.it', 'password' => 'nuovapass1'])[0]);
+        $this->assertSame(401, $this->call('POST', '/auth/login', ['email' => 'mario@test.it', 'password' => 'password123'])[0]);
+        $this->assertSame(401, $this->call('POST', '/auth/refresh', ['refresh_token' => $old['refresh_token']])[0]);
+        $this->assertSame(401, $this->call('GET', '/me', null, $old['access_token'])[0]);
+    }
+
+    public function test_wrong_reset_code_400(): void
+    {
+        $this->registeredUser();
+        $this->call('POST', '/auth/forgot-password', ['email' => 'mario@test.it']);
+        $wrong = $this->mailer->lastCode() === '111111' ? '222222' : '111111';
+
+        [$status] = $this->call('POST', '/auth/reset-code', ['email' => 'mario@test.it', 'code' => $wrong]);
+
+        $this->assertSame(400, $status);
+    }
+
+    public function test_reset_token_cannot_open_the_app(): void
+    {
+        $this->registeredUser();
+
+        $this->assertSame(401, $this->call('GET', '/me', null, $this->resetToken())[0]);
+    }
+
+    public function test_access_token_cannot_reset_the_password(): void
+    {
+        $session = $this->registeredUser();
+
+        [$status] = $this->call('POST', '/auth/reset-password', ['reset_token' => $session['access_token'], 'password' => 'nuovapass1']);
+
+        $this->assertSame(401, $status);
+    }
+
+    public function test_reset_token_works_only_once(): void
+    {
+        $this->registeredUser();
+        $token = $this->resetToken();
+        $this->call('POST', '/auth/reset-password', ['reset_token' => $token, 'password' => 'nuovapass1']);
+
+        [$status] = $this->call('POST', '/auth/reset-password', ['reset_token' => $token, 'password' => 'altrapass2']);
+
+        $this->assertSame(401, $status);
+    }
+
+    public function test_reset_needs_a_valid_new_password(): void
+    {
+        $this->registeredUser();
+
+        [$status] = $this->call('POST', '/auth/reset-password', ['reset_token' => $this->resetToken(), 'password' => 'corta']);
+
+        $this->assertSame(400, $status);
     }
 
     public function test_other_users_workout_is_404(): void

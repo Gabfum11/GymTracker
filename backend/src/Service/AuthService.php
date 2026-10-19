@@ -21,6 +21,7 @@ final class AuthService
     private const MAX_CODE_ATTEMPTS = 5;
     private const WRONG_LOGIN = 'Email o password errati';
     private const BAD_CODE = 'Codice scaduto o già usato: chiedine uno nuovo';
+    private const RESET_PURPOSE = 'password_reset';
 
     public function __construct(
         private UserRepository $users,
@@ -115,6 +116,38 @@ final class AuthService
     {
         $this->refreshTokens->deleteForUser($userId);
         $this->users->bumpTokenVersion($userId);
+    }
+
+    /** "Password dimenticata": manda un codice. Risponde sempre allo stesso modo, anche se l'email non esiste. */
+    public function forgotPassword(mixed $email): void
+    {
+        $user = $this->users->findByEmail(self::email($email, strict: false));
+        if ($user && $user['is_verified']) {
+            $this->sendCode($user, 'reset');
+        }
+    }
+
+    /** Codice giusto → un token che serve SOLO a cambiare la password, valido 10 minuti. */
+    public function resetCode(mixed $email, mixed $code): string
+    {
+        $user = $this->users->findByEmail(self::email($email, strict: false)) ?? throw new ValidationException(self::BAD_CODE);
+        $this->consumeCode($user, 'reset', (string) $code);
+
+        return $this->tokens->accessToken((int) $user['id'], (int) $user['token_version'], self::RESET_PURPOSE, self::CODE_MINUTES * 60);
+    }
+
+    public function resetPassword(mixed $resetToken, mixed $password): void
+    {
+        $payload = $this->tokens->decode((string) $resetToken);
+        $user = $payload ? $this->users->find((int) $payload['sub']) : null;
+        // deve essere proprio un token di reset, e ancora valido (token_version non cambiato)
+        if (!$user || ($payload['purpose'] ?? null) !== self::RESET_PURPOSE || (int) $user['token_version'] !== $payload['ver']) {
+            throw new UnauthorizedException('Link scaduto o già usato: ricomincia dal recupero password');
+        }
+
+        $this->users->setPassword((int) $user['id'], password_hash(self::password($password), PASSWORD_ARGON2ID));
+        // chi ha chiesto il reset ha perso l'accesso: si chiude ogni sessione, e il token di reset non vale più
+        $this->logoutAll((int) $user['id']);
     }
 
     /** L'id dell'utente se l'access token è valido, altrimenti null. Lo usa AuthMiddleware. */

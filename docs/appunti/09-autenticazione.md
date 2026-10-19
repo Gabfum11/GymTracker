@@ -66,6 +66,31 @@ Una riga per "secchio" (`login:10.0.0.1`, `parse:7`…) con un contatore e l'ora
 
 È **atomica**: due richieste simultanee non possono leggere lo stesso valore. Se il contatore supera il limite → 429.
 
+## 9b · Recupero password
+
+| API | Cosa fa |
+|---|---|
+| `POST /auth/forgot-password` `{email}` | manda un codice di recupero → **204 sempre**, anche se l'email non esiste |
+| `POST /auth/reset-code` `{email, code}` | codice giusto → `{reset_token}`, un JWT speciale valido 10 minuti |
+| `POST /auth/reset-password` `{reset_token, password}` | imposta la nuova password e **chiude tutte le sessioni** → 204 |
+
+Le scelte:
+- **204 sempre su "password dimenticata"**: se rispondesse "email non trovata", chiunque potrebbe scoprire chi è registrato.
+- **Il `reset_token` è un JWT con `purpose: password_reset`**. Due controlli opposti:
+  - `AuthMiddleware` **rifiuta** i JWT con `purpose`: un token di reset non apre l'app;
+  - `resetPassword` **accetta solo** quelli con `purpose = password_reset`: un access token normale non cambia la password.
+- **Si usa una volta sola**: dopo il cambio, `logoutAll` aumenta `token_version`, quindi il `reset_token` (che porta il vecchio `ver`) non vale più. Niente tabella in più: lo stesso trucco del logout ovunque.
+- **Chiudere tutte le sessioni** dopo il cambio: chi ha chiesto il reset forse aveva la password rubata; chi la conosceva viene buttato fuori da ogni dispositivo.
+
+## Test più veloci (lezione di questo passo)
+
+Con le tabelle nuove la suite era passata da pochi secondi a **2 minuti e mezzo**. Misurando, ogni scrittura costava ~0,23 s: PostgreSQL aspetta che ogni salvataggio sia scritto fisicamente su disco, e in Docker su Windows è lento. Tre correzioni, **solo nei test** (`DbTestCase`):
+1. `SET synchronous_commit TO off`: non aspettare il disco (nei test, perdere l'ultimo dato in caso di blackout non importa);
+2. `DELETE` invece di `TRUNCATE` per svuotare tabelle quasi vuote;
+3. non azzerare i contatori degli id: i test usano gli id veri.
+
+Risultato: **15 secondi**. Il resto è Argon2, che è lento apposta. Lezione: prima si **misura**, poi si corregge.
+
 ## Come in TrackIt
 
 | GymTracker (PHP) | TrackIt (Python) |

@@ -23,9 +23,19 @@ abstract class DbTestCase extends TestCase
     protected function setUp(): void //gira automaticamente prima di ciascun test
     {
         $this->pdo = Database::connect($_ENV); //si collega al db
+        // solo nei test: non aspettare la scrittura fisica su disco a ogni salvataggio (in Docker su Windows costa ~0,2 s ciascuno)
+        $this->pdo->exec('SET synchronous_commit TO off');
         Migrator::run($this->pdo, __DIR__ . '/../../migrations'); //esegue le migrazioni con il migrator
-        $this->pdo->exec('TRUNCATE users, refresh_tokens, otp_codes, rate_limits, exercises, workouts, sets RESTART IDENTITY CASCADE');
+        // DELETE invece di TRUNCATE: su tabelle quasi vuote è istantaneo, TRUNCATE in Docker su Windows impiega secondi
+        $this->pdo->exec('DELETE FROM sets; DELETE FROM workouts; DELETE FROM exercises; DELETE FROM otp_codes;
+                          DELETE FROM refresh_tokens; DELETE FROM rate_limits; DELETE FROM users;');
+        // gli id NON ripartono da 1 (azzerarli costa ~0,5 s per test): i test usano gli id veri
         //svuota tutte le tabelle con truncate, cosi ogni test parte da un db pulito e non risente dei dati lasciati da un altro
+    }
+
+    protected function tearDown(): void
+    {
+        unset($this->pdo); // chiude la connessione: PHPUnit tiene in memoria i test finiti, che altrimenti la terrebbero aperta
     }
 
     protected function createUser(string $email = 'a@test.it'): int

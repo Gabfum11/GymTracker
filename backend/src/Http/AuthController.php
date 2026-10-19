@@ -70,6 +70,31 @@ final class AuthController
         return $response->withStatus(204);
     }
 
+    /** POST /auth/forgot-password {email} → 204 (sempre) */
+    public function forgotPassword(Request $request, Response $response): Response
+    {
+        $this->auth->forgotPassword(((array) $request->getParsedBody())['email'] ?? '');
+
+        return $response->withStatus(204);
+    }
+
+    /** POST /auth/reset-code {email, code} → {reset_token} */
+    public function resetCode(Request $request, Response $response): Response
+    {
+        $b = (array) $request->getParsedBody();
+
+        return JsonResponse::with($response, ['reset_token' => $this->auth->resetCode($b['email'] ?? '', $b['code'] ?? '')]);
+    }
+
+    /** POST /auth/reset-password {reset_token, password} → 204 */
+    public function resetPassword(Request $request, Response $response): Response
+    {
+        $b = (array) $request->getParsedBody();
+        $this->auth->resetPassword($b['reset_token'] ?? '', $b['password'] ?? '');
+
+        return $response->withStatus(204);
+    }
+
     /** GET /me */
     public function me(Request $request, Response $response): Response
     {
