@@ -42,4 +42,9 @@ final class WorkoutRepository
     {
         $this->pdo->prepare('UPDATE workouts SET ended_at = now() WHERE id = ? AND ended_at IS NULL')->execute([$id]);
     }
+
+    public function delete(int $id): void
+    {
+        $this->pdo->prepare('DELETE FROM workouts WHERE id = ?')->execute([$id]);
+    }
 }

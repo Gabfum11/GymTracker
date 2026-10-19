@@ -50,4 +50,12 @@ final class WorkoutController
     {
         return JsonResponse::with($response, $this->service->finish($request->getAttribute('user_id'), (int) $args['id']));
     }
+
+    /** DELETE /workouts/{id} → 204: annulla l'allenamento in corso, serie comprese */
+    public function cancel(Request $request, Response $response, array $args): Response
+    {
+        $this->service->cancel($request->getAttribute('user_id'), (int) $args['id']);
+
+        return $response->withStatus(204);
+    }
 }

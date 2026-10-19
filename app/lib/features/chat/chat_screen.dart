@@ -41,13 +41,34 @@ class _ChatScreenState extends State<ChatScreen> {
     );
   }
 
+  Future<void> _confirmCancel() async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text("Annullare l'allenamento?"),
+        content: const Text('Tutte le serie di questo allenamento verranno cancellate.'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('No')),
+          TextButton(onPressed: () => Navigator.pop(context, true), child: const Text('Annulla allenamento')),
+        ],
+      ),
+    );
+    if (ok == true) await vm.cancel();
+  }
+
   @override
   Widget build(BuildContext context) {
     // ListenableBuilder ridisegna la schermata ogni volta che il ViewModel chiama notifyListeners()
     return ListenableBuilder(
       listenable: vm,
       builder: (context, _) => Scaffold(
-        appBar: AppBar(title: const Text('Allenamento')),
+        appBar: AppBar(
+          title: const Text('Allenamento'),
+          actions: [
+            if (vm.hasOpenWorkout)
+              TextButton(onPressed: vm.busy ? null : _confirmCancel, child: const Text('Annulla')),
+          ],
+        ),
         body: Column(
           children: [
             Expanded(

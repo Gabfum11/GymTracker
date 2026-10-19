@@ -220,6 +220,12 @@ class ChatViewModel extends ChangeNotifier {
     if (error == null) await load();
   }
 
+  /// "Annulla allenamento": lo cancella con tutte le serie e la chat riparte da capo.
+  Future<void> cancel() async {
+    await _run(() => _api.delete('/workouts/$workoutId'));
+    if (error == null) await load();
+  }
+
   /// Esegue una chiamata al backend gestendo "sto caricando" e gli errori in un posto solo.
   Future<void> _run(Future<void> Function() action) async {
     busy = true;

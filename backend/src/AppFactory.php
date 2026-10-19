@@ -142,10 +142,11 @@ final class AppFactory
             }
             $api->get('/exercises', [$exercises, 'list']);
             $api->post('/exercises', [$exercises, 'create']);
-            $api->post('/workouts', [$workouts, 'start']);
+            $api->post('/workouts', [$workouts, 'start']); //quando arriva un Post su workouts, chiama il metodo start dell'oggetto workouts
             $api->get('/workouts/current', [$workouts, 'current']);
             $api->put('/workouts/{id:\d+}/exercises/{exerciseId:\d+}/sets', [$workouts, 'saveSets']);
             $api->post('/workouts/{id:\d+}/finish', [$workouts, 'finish']);
-        })->add(new AuthMiddleware($authService));
+            $api->delete('/workouts/{id:\d+}', [$workouts, 'cancel']);
+        })->add(new AuthMiddleware($authService)); //mette un controllo davanti a tutte le rotte del gruppo
     }
 }

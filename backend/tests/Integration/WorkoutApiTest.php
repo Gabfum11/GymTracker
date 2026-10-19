@@ -124,6 +124,30 @@ final class WorkoutApiTest extends DbTestCase
         $this->assertNull($current);
     }
 
+    public function test_cancel_deletes_open_workout(): void
+    {
+        [, $workout] = $this->call('POST', '/workouts');
+        $dip = $this->createExercise('Dip');
+        $this->call('PUT', "/workouts/{$workout['id']}/exercises/$dip/sets", ['sets' => [['weight_kg' => 45, 'reps' => 8]]]);
+
+        [$status] = $this->call('DELETE', "/workouts/{$workout['id']}");
+
+        $this->assertSame(204, $status);
+        [, $current] = $this->call('GET', '/workouts/current');
+        $this->assertNull($current);
+        $this->assertSame(0, (int) $this->pdo->query('SELECT count(*) FROM sets')->fetchColumn());
+    }
+
+    public function test_cancel_finished_workout_returns_409(): void
+    {
+        [, $workout] = $this->call('POST', '/workouts');
+        $this->call('POST', "/workouts/{$workout['id']}/finish");
+
+        [$status] = $this->call('DELETE', "/workouts/{$workout['id']}");
+
+        $this->assertSame(409, $status);
+    }
+
     public function test_put_on_finished_workout_returns_409(): void
     {
         [, $workout] = $this->call('POST', '/workouts');

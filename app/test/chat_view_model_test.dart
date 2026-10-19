@@ -233,6 +233,16 @@ void main() {
     expect(vm.items.single, isA<BotMessage>());
   });
 
+  test("annullare l'allenamento lo cancella e la chat riparte da «Inizia allenamento»", () async {
+    await startWorkout();
+    backend.on('DELETE /workouts/1', null);
+
+    await vm.cancel();
+
+    expect(backend.routes.skip(backend.routes.length - 2), ['DELETE /workouts/1', 'GET /workouts/current']);
+    expect(vm.hasOpenWorkout, isFalse);
+  });
+
   test('un errore del parser non perde il messaggio dell\'utente', () async {
     await startWorkout();
     backend.fail('POST /parse', 503, 'Il bot non risponde, riprova tra poco');

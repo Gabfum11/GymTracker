@@ -24,7 +24,7 @@ final class AuthMiddleware implements MiddlewareInterface
     public function process(ServerRequestInterface $request, RequestHandlerInterface $handler): ResponseInterface
     {
         $header = $request->getHeaderLine('Authorization');
-        $userId = str_starts_with($header, 'Bearer ')
+        $userId = str_starts_with($header, 'Bearer ') //se il testo inzia con Bearer restituisce true
             ? $this->auth->userIdForAccessToken(substr($header, 7))
             : null;
 

@@ -58,6 +58,15 @@ final class WorkoutService
         return $this->summary($this->workouts->find($userId, $workoutId));
     }
 
+    /** Annulla solo un allenamento aperto: quelli salvati restano nello storico. */
+    public function cancel(int $userId, int $workoutId): void
+    {
+        if ($this->ownedWorkout($userId, $workoutId)['ended_at'] !== null) {
+            throw new ConflictException('Questo allenamento è già chiuso');
+        }
+        $this->workouts->delete($workoutId); // le serie spariscono da sole (ON DELETE CASCADE)
+    }
+
     private function ownedWorkout(int $userId, int $workoutId): array
     {
         return $this->workouts->find($userId, $workoutId)
