@@ -34,7 +34,7 @@ Il punto distintivo: **il bot si adatta all'utente, non il contrario.** La chat 
 - Obiettivi settimanali, confronto con periodi precedenti.
 - Peso corporeo, altezza, età, calorie.
 - Volume totale (kg × rip sommati): scartato dall'utente perché "non indica nulla".
-- Recupero password, login social.
+- Login social (Google).
 - App Android nativa (solo se avanza tempo alla fine).
 
 **Anti-obiettivi (falliscono anche se funzionano)**
@@ -108,7 +108,7 @@ Prima di tutto ci sono **registrazione e login** (nome, email, password).
 ### 5.1 Tabelle [scelta del builder: forma indicativa]
 
 - `users` (id, name, email unico, password_hash, created_at)
-- `auth_tokens` (id, user_id, token_hash, created_at) — vedi §6.3
+- `users` + `is_verified`, `token_version`; `refresh_tokens` (id, user_id, token_hash, expires_at, used_at, created_at); `otp_codes` (id, user_id, code_hash, purpose, expires_at, attempts, created_at); `rate_limits` (bucket, count, reset_at) — vedi §6.3. La prima versione aveva `auth_tokens`, sostituita da `refresh_tokens`.
 - `exercises` (id, user_id, name, is_weighted_bodyweight, created_at) — esercizi **per utente**, nome unico per utente
 - `workouts` (id, user_id, started_at, ended_at nullable)
 - `sets` (id, workout_id, exercise_id, position, weight_kg NUMERIC(5,2), reps INT, created_at)
@@ -159,9 +159,20 @@ Niente Riverpod all'inizio: si usa `ChangeNotifier`, già incluso in Flutter. Ri
 
 **Esplicitamente evitati**: Clean Architecture completa, DDD, microservizi.
 
-### 6.3 Autenticazione [scelta del builder]
+### 6.3 Autenticazione (decisa dall'utente il 2026-10-19: "alla stessa maniera di TrackIt")
 
-Email + password (`password_hash` / `password_verify`). Al login il server genera un token casuale, ne salva l'hash in `auth_tokens` e lo restituisce; il client lo manda come `Authorization: Bearer <token>`. Scelto al posto di JWT perché più semplice da spiegare e revocabile ("Esci" cancella il token). Ogni endpoint (tranne login/registrazione) restituisce solo i dati dell'utente del token.
+Stesso schema di `D:\FinanceApp` (`business_logic/security.py`, `routers/auth.py`), rifatto in PHP:
+
+- **Password** con Argon2id (`password_hash(..., PASSWORD_ARGON2ID)`).
+- **Access token JWT** HS256 (libreria `firebase/php-jwt`), valido **15 minuti**, payload `sub` (id utente) + `ver` (`users.token_version`). Inviato come `Authorization: Bearer`.
+- **Refresh token** casuale, salvato solo come **SHA-256** in `refresh_tokens`, valido **30 giorni**, **ruotato** a ogni uso (`used_at`). Se torna un refresh già usato = copiato → revoca di tutti i refresh e `token_version + 1`.
+- **Verifica email con codice OTP** a 6 cifre (generatore crittografico), valido 10 minuti, max 5 tentativi per codice, max 3 invii all'ora per account. Senza verifica non si fa login.
+- **Recupero password**: codice OTP via email → token JWT di reset (`purpose=password_reset`, breve) → nuova password; poi `token_version + 1` e revoca dei refresh (tutte le sessioni chiuse).
+- **Logout** (revoca il refresh del dispositivo) e **logout da tutti i dispositivi**.
+- **Limiti per IP** su registrazione e login.
+- **Email via Brevo** (API HTTP, come TrackIt: Render gratuito blocca SMTP). Senza chiave Brevo (sviluppo, test) il codice si scrive nel log del server.
+- Escluso: login con Google.
+- Ogni endpoint protetto restituisce solo i dati dell'utente del token.
 
 ### 6.4 Formato del parser AI [scelta del builder: forma indicativa]
 
@@ -210,7 +221,7 @@ La risposta dell'AI non viene mai salvata direttamente: diventa la scheda di con
 
 1. Chat che registra un esercizio: testo → AI → scheda di conferma modificabile → salvataggio. Fino al login si lavora con un utente fisso, **solo in locale**.
 2. Inizio/fine allenamento + Riepilogo.
-3. Registrazione, login, token. [scelta del builder: anticipato rispetto alla prima versione perché l'app va online in settimana 1 e un endpoint AI pubblico senza login consumerebbe credito a chiunque abbia il link]
+3. Registrazione con verifica email, login, JWT + refresh, recupero password (§6.3). [scelta del builder: anticipato rispetto alla prima versione perché l'app va online in settimana 1 e un endpoint AI pubblico senza login consumerebbe credito a chiunque abbia il link]
 4. Deploy online + dati demo, **entro la fine della settimana 1**, con limite di chiamate al parser per utente (es. 200 al giorno) [scelta del builder], perché le credenziali demo sono pubbliche nel README.
 5. Storico con foglio di dettaglio.
 6. Progressi con grafico.

@@ -300,35 +300,48 @@ Tutte le risposte sono JSON. Errori: `{"error": "<messaggio in italiano>"}` con 
 - [ ] **Step 4: Esegui** `composer test` e `flutter test` → PASS; prova manuale di un allenamento completo.
 - [ ] **Step 5: Appunti + commit** `feat: record e riepilogo di fine allenamento`.
 
-### Task 9: Autenticazione a token e limite del parser (backend)
+> **Riscritto il 2026-10-19**: l'utente ha deciso l'autenticazione "come TrackIt" (spec §6.3): JWT 15 min + refresh ruotato 30 giorni + verifica email OTP + recupero password + Brevo. Il task 9 è diviso in 9 (account e token) e 9b (recupero password).
+
+### Task 9: Account, verifica email e token (backend)
 
 **Files:**
-- Create: `backend/src/Repository/{UserRepository,TokenRepository,ParseUsageRepository}.php`, `backend/src/Service/{AuthService,RateLimiter}.php`, `backend/src/Http/{AuthController,AuthMiddleware}.php`, `backend/migrations/002_parse_usage.sql` (`parse_usage(user_id, day DATE, count INT, PK(user_id, day))`), `backend/tests/Integration/AuthApiTest.php`, `docs/appunti/09-autenticazione.md`
-- Modify: `AppFactory` (gruppo di rotte protetto), tutti i controller leggono `$request->getAttribute('user_id')` al posto di `dev_user_id`.
+- Create: `backend/migrations/002_auth.sql` (users + `is_verified`, `token_version`; DROP `auth_tokens`; `refresh_tokens`, `otp_codes`, `rate_limits`), `backend/src/Repository/{UserRepository,RefreshTokenRepository,OtpRepository}.php`, `backend/src/Service/{AuthService,TokenService,RateLimiter,UnauthorizedException,TooManyRequestsException}.php`, `backend/src/Mail/{Mailer,BrevoMailer,LogMailer}.php`, `backend/src/Http/{AuthController,AuthMiddleware}.php`, `backend/tests/Support/FakeMailer.php`, `backend/tests/Integration/AuthApiTest.php`, `docs/appunti/09-autenticazione.md`
+- Modify: `composer.json` (`firebase/php-jwt`), `AppFactory` (rotte `/auth/*`, gruppo protetto da `AuthMiddleware` al posto dell'utente fisso), test esistenti (usano un token vero), `MigrationTest`/`DbTestCase` (tabelle nuove), `.env.example` (`JWT_SECRET`, `BREVO_API_KEY`, `MAIL_FROM`).
 
 **Interfaces:**
-- Produces: `AuthService::register(string $name, string $email, string $password): array{token, user}`, `login(string $email, string $password): array{token, user}`, `userIdForToken(string $token): ?int`, `logout(string $token): void`. Token = `bin2hex(random_bytes(32))`, in DB solo `hash('sha256', $token)`. `RateLimiter::hit(int $userId, int $limit = 200): bool` (UPSERT atomico, `false` oltre il limite).
+- `TokenService(string $secret)`: `accessToken(int $userId, int $version, ?string $purpose = null, int $ttl = 900): string`, `decode(string $jwt): ?array` (null se firma/scadenza non valide).
+- `AuthService`: `register(name, email, password): void` (invia OTP `verify`), `verifyEmail(email, code): array{access_token, refresh_token, user}`, `login(email, password): array{...}`, `refresh(string $refresh): array{...}`, `logout(string $refresh): void`, `logoutAll(int $userId): void`, `userIdForAccessToken(string $jwt): ?int`.
+- `interface Mailer { public function send(string $to, string $subject, string $text): void; }` — `BrevoMailer` (curl a `https://api.brevo.com/v3/smtp/email`), `LogMailer` (scrive su `error_log`, per sviluppo), `FakeMailer` (test: ricorda le email).
+- `RateLimiter::hit(string $bucket, int $limit, int $windowSeconds): bool` — UPSERT atomico; usato per: parse 200/giorno per utente, registrazione 5/ora per IP, login 10/15 min per IP, invio OTP 3/ora per account.
+- Rotte: `POST /auth/register`, `/auth/verify-email`, `/auth/resend-code`, `/auth/login`, `/auth/refresh`, `/auth/logout`, `/auth/logout-all` (protetta), `GET /me` (protetta). Errori: 401 credenziali/token, 403 email non verificata, 409 email già verificata, 429 troppi tentativi.
 - [ ] **Step 1: Test che falliscono** (`AuthApiTest`):
-  - `test_register_then_me`; `test_duplicate_email_409` (maiuscole ignorate); `test_short_password_400`.
-  - `test_wrong_password_401` con messaggio uguale a email inesistente.
-  - `test_protected_route_without_token_401`; `test_logout_revokes_token`.
-  - `test_other_users_workout_is_404` su `GET /workouts/{id}`, `PUT …/sets`, `GET /exercises/{id}/progress` (Review Focus 5; la rotta progress arriva al Task 13: aggiungere lì l'asserzione).
-  - `test_parse_over_limit_returns_429` (limite abbassato a 2 via config).
-  - `test_token_is_stored_hashed` (nessuna riga di `auth_tokens` contiene il token in chiaro).
+  - `test_register_sends_code_and_login_needs_verification` (403 prima della verifica); `test_verify_email_returns_tokens_then_me_works`; `test_wrong_code_5_times_burns_the_code`; `test_duplicate_verified_email_409`; `test_reregister_unverified_replaces_account`; `test_short_password_400`.
+  - `test_wrong_password_401_same_message_as_unknown_email`; `test_password_is_argon2`.
+  - `test_protected_route_without_or_with_bad_token_401`; `test_expired_access_token_401`.
+  - `test_refresh_rotates_and_old_refresh_stops_working`; `test_reused_refresh_revokes_everything` (anche l'access token valido smette di funzionare: `token_version`); `test_logout_revokes_refresh`; `test_logout_all`.
+  - `test_refresh_token_is_stored_hashed`; `test_login_rate_limited_per_ip_429`; `test_parse_over_limit_returns_429`.
+  - `test_other_users_workout_is_404` (Review Focus 5; progress: Task 13).
 - [ ] **Step 2: Esegui** → FAIL. **Step 3: Implementa.** **Step 4: Esegui** → PASS (anche i test dei task precedenti, adattati per usare un token).
-- [ ] **Step 5: Appunti + commit** `feat: registrazione, login e token`.
+- [ ] **Step 5: Appunti + commit** `feat: account, verifica email, JWT e refresh token`.
 
-### Task 10: Login e registrazione nell'app
+### Task 9b: Recupero password (backend)
+
+**Files:** Modify `AuthService`, `AuthController`, `AppFactory`, `AuthApiTest`; appunti in `09-autenticazione.md`.
+
+**Interfaces:** `POST /auth/forgot-password {email}` → 204 sempre (non rivela se l'email esiste; invia OTP `reset` solo a utenti verificati, max 3/ora); `POST /auth/reset-code {email, code}` → `{reset_token}` (JWT `purpose=password_reset`, 10 min); `POST /auth/reset-password {reset_token, password}` → 204, `token_version + 1`, revoca tutti i refresh.
+- [ ] **Step 1: Test che falliscono**: `test_forgot_unknown_email_is_204_and_sends_nothing`; `test_reset_flow_changes_password_and_closes_sessions`; `test_reset_token_cannot_be_used_as_access_token`; `test_access_token_cannot_be_used_as_reset_token`; `test_reset_token_works_once` (`token_version` cambia).
+- [ ] **Step 2–4** come sopra. **Step 5: commit** `feat: recupero password`.
+
+### Task 10: Accesso nell'app
 
 **Files:**
-- Create: `app/lib/features/auth/{auth_view_model,login_screen}.dart`, `app/test/auth_view_model_test.dart`, `docs/appunti/10-login-app.md`
-- Modify: `main.dart` (porta d'ingresso: senza token → login), `api_client.dart` (header Bearer; 401 → logout locale)
+- Create: `app/lib/features/auth/{auth_view_model,login_screen,code_screen,reset_screen}.dart`, `app/test/auth_view_model_test.dart`, `docs/appunti/10-login-app.md`
+- Modify: `main.dart` (senza sessione → login), `api_client.dart` (Bearer; su 401 prova **una volta** `/auth/refresh` e ripete la richiesta; se fallisce → logout locale), Profilo segnaposto con **Esci**.
 
 **Interfaces:**
-- Produces: `AuthViewModel extends ChangeNotifier` con `String? token`, `Future<void> restore()` (da `shared_preferences`, chiave `auth_token`), `login(email, password)`, `register(name, email, password)`, `logout()` (chiama `/auth/logout`, cancella il token anche se la chiamata fallisce).
-- [ ] **Step 1: Test che falliscono**: `restore reads saved token`; `login saves token`; `wrong credentials set error message`; `logout clears token even if api fails`; `401 from any call logs out`.
-- [ ] **Step 2: Esegui** → FAIL. **Step 3: Implementa** (una schermata con due modalità Accedi/Registrati). **Step 4: Esegui** → PASS.
-- [ ] **Step 5: Appunti + commit** `feat: login e registrazione nell'app`.
+- `AuthViewModel extends ChangeNotifier`: `restore()` (refresh token da `shared_preferences`, chiave `refresh_token`), `register`, `verifyEmail`, `resendCode`, `login`, `forgotPassword`, `resetPassword`, `logout()` (chiama `/auth/logout`, cancella i token anche se la chiamata fallisce). Stato: `loggedIn`, `step` (login / registrazione / codice / reset), `busy`, `error`.
+- [ ] **Step 1: Test che falliscono**: `restore with saved refresh logs in`; `login saves tokens`; `unverified login goes to code step`; `wrong credentials set error message`; `logout clears tokens even if api fails`; `expired access token is refreshed once and the call is retried`; `failed refresh logs out`; `reset flow`.
+- [ ] **Step 2–4.** **Step 5: Appunti + commit** `feat: accesso nell'app`.
 
 ### Task 11: Online! (Render + Supabase + GitHub Pages + dati demo)
 
