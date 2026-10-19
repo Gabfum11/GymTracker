@@ -196,7 +196,7 @@ La risposta dell'AI non viene mai salvata direttamente: diventa la scheda di con
 
 - Sviluppo in locale sul portatile (PHP + PostgreSQL locali).
 - **Online entro la fine della prima settimana**, tutto su piani gratuiti, con lo stesso schema già collaudato in TrackIt:
-  - **Flutter Web** → **GitHub Pages**, pubblicato da una GitHub Action a ogni push che tocca il frontend (come `.github/workflows/web.yml` di TrackIt). [scelta del builder]
+  - **Flutter Web** → **Render Static Site** (deciso dall'utente il 2026-10-19 al posto di GitHub Pages: tutto su Render). Render non ha Flutter: lo script di build lo scarica e lancia `flutter build web`. Sempre attivo, ripubblicato a ogni push.
   - **API PHP** → Render *Web Service* con **Dockerfile** (Render non ha un runtime PHP nativo). Il piano gratuito si spegne dopo ~15 minuti di inattività e la prima richiesta può impiegare fino a un minuto: prima della demo si apre l'app un paio di minuti prima. Il frontend mostra un messaggio "Sto svegliando il server…" se la prima risposta tarda. [scelta del builder]
   - **Database** → Supabase (vedi §6.1). Scartati il Postgres gratuito di Render (scade dopo 30 giorni) e Aiven MySQL (strumento nuovo per l'utente).
   - Scartati gli hosting PHP gratuiti tipo InfinityFree: bloccano le richieste API verso il sito con un controllo JavaScript non disattivabile.

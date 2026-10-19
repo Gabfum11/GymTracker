@@ -4,7 +4,7 @@
 
 **Goal:** Web app (telefono + computer) per registrare gli allenamenti scrivendo in una chat; il bot trasforma il testo in serie (kg × rip) da confermare, con Storico, Progressi e Profilo.
 
-**Architecture:** API REST in PHP 8 + Slim 4 a strati (Controller → Service → Repository → PostgreSQL), con l'AI isolata in `ParserService` dietro un'interfaccia `LlmClient`. Frontend Flutter Web in MVVM leggero (Screen → ViewModel `ChangeNotifier` → `ApiClient`). Deploy: API su Render (Docker), DB su Supabase, frontend su GitHub Pages.
+**Architecture:** API REST in PHP 8 + Slim 4 a strati (Controller → Service → Repository → PostgreSQL), con l'AI isolata in `ParserService` dietro un'interfaccia `LlmClient`. Frontend Flutter Web in MVVM leggero (Screen → ViewModel `ChangeNotifier` → `ApiClient`). Deploy: API su Render (Docker), DB su Supabase, frontend su Render Static Site.
 
 **Tech Stack:** PHP 8.3, Slim 4, slim/psr7, vlucas/phpdotenv, PHPUnit 11, PDO pgsql, PostgreSQL 16 (Docker in locale, Supabase online), Groq API (`openai/gpt-oss-20b`, `response_format: json_object`), Flutter (stable) + `http`, `shared_preferences`, `google_fonts`, `fl_chart`.
 
@@ -85,7 +85,7 @@ app/                          progetto Flutter
   lib/features/progress/  progress_view_model.dart  progress_screen.dart
   lib/features/profile/   profile_view_model.dart  profile_screen.dart  training_calendar.dart
   test/ …
-.github/workflows/web.yml
+app/render-build.sh       build del sito statico su Render (scarica Flutter, compila)
 docs/appunti/
 README.md
 ```
@@ -343,10 +343,10 @@ Tutte le risposte sono JSON. Errori: `{"error": "<messaggio in italiano>"}` con 
 - [ ] **Step 1: Test che falliscono**: `restore with saved refresh logs in`; `login saves tokens`; `unverified login goes to code step`; `wrong credentials set error message`; `logout clears tokens even if api fails`; `expired access token is refreshed once and the call is retried`; `failed refresh logs out`; `reset flow`.
 - [ ] **Step 2–4.** **Step 5: Appunti + commit** `feat: accesso nell'app`.
 
-### Task 11: Online! (Render + Supabase + GitHub Pages + dati demo)
+### Task 11: Online! (Render + Supabase)
 
 **Files:**
-- Create: `backend/Dockerfile` (`php:8.3-apache`, `docker-php-ext-install pdo_pgsql`, `composer install --no-dev`, `DocumentRoot /var/www/html/public`, `a2enmod rewrite`, Apache su `${PORT}`, all'avvio `php bin/migrate.php`), `backend/public/.htaccess` (tutto su `index.php`), `backend/.dockerignore`, `backend/bin/seed-demo.php`, `.github/workflows/web.yml`, `docs/appunti/11-deploy.md`
+- Create: `backend/Dockerfile` (`php:8.3-apache`, `docker-php-ext-install pdo_pgsql`, `composer install --no-dev`, `DocumentRoot /var/www/html/public`, `a2enmod rewrite`, Apache su `${PORT}`, all'avvio `php bin/migrate.php`), `backend/public/.htaccess` (tutto su `index.php`), `backend/.dockerignore`, `backend/bin/seed-demo.php`, `app/render-build.sh`, `docs/appunti/11-deploy.md`
 - Modify: `chat/…` e `api_client.dart`: se una richiesta supera 4 s, mostrare "Sto svegliando il server…"
 
 **Interfaces:**
@@ -355,10 +355,10 @@ Tutte le risposte sono JSON. Errori: `{"error": "<messaggio in italiano>"}` con 
 - [ ] **Step 2: Esegui** → FAIL. **Step 3: Implementa** seed. **Step 4: Esegui** → PASS.
 - [ ] **Step 5: Docker in locale**: `docker build -t gymtracker-api backend` e `docker run -p 8080:8080 -e PORT=8080 --env-file backend/.env gymtracker-api` → `curl localhost:8080/health` → `{"ok":true}`.
 - [ ] **Step 6: Supabase** (utente, guidato): nuovo progetto in UE, copia della stringa **Session pooler** → variabili `DB_*` con `DB_SSLMODE=require`.
-- [ ] **Step 7: Render** (utente, guidato): Web Service da GitHub, runtime Docker, root `backend`, variabili `DB_*`, `GROQ_API_KEY`, `GROQ_MODEL`, `CORS_ORIGIN=https://<utente>.github.io`. Poi `php bin/seed-demo.php` dalla Shell di Render.
-- [ ] **Step 8: GitHub Pages**: workflow con `subosito/flutter-action`, `flutter build web --release --base-href /GymTracker/ --dart-define=API_URL=<url Render>`, deploy con `actions/deploy-pages` (come TrackIt).
+- [ ] **Step 7: Render** (utente, guidato): Web Service da GitHub, runtime Docker, root `backend`, variabili `DB_*`, `GROQ_API_KEY`, `GROQ_MODEL`, `JWT_SECRET`, `BREVO_API_KEY`, `MAIL_FROM`, `TRUST_PROXY=true`, `CORS_ORIGIN=https://<sito>.onrender.com`. Seed dei dati d'esempio solo se l'utente decide per l'account demo.
+- [ ] **Step 8: Render Static Site** (utente, guidato): root `app`, build `bash render-build.sh`, publish `build/web`, variabile `API_URL=<url del Web Service>`, regola di rewrite `/*` → `/index.html`.
 - [ ] **Step 9: Verifica dal telefono**: login demo, un esercizio registrato e salvato, ricarica → c'è ancora.
-- [ ] **Step 10: Appunti + commit** `feat: deploy su Render, Supabase e GitHub Pages`.
+- [ ] **Step 10: Appunti + commit** `feat: deploy su Render e Supabase`.
 
 ### Task 12: Storico
 
