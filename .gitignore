@@ -1,14 +1,9 @@
 # segreti
 .env
-
-# dipendenze e build
-backend/vendor/
-backend/.phpunit.cache/
-app/build/
-app/.dart_tool/
-
+.vscode/
 # file di lavoro di Claude (mockup, ledger)
 .superpowers/
 
-# Flutter scaricato da render-build.sh (solo su Render)
-app/flutter/
+venv/
+__pycache__/
+appunti/
